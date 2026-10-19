@@ -4,10 +4,6 @@ module i2c_master_write8 #
 (
     parameter integer CLK_HZ = 50000000,
     parameter integer I2C_HZ = 100000,
-    // Number of bytes after START: 3 for a normal register write
-    // (device-write, register, data), or 2 for the diagnostic probe
-    // (device-write, register pointer, STOP).
-    parameter integer BYTE_COUNT = 3,
     // 1 = abort the frame on a NACK; 0 = keep clocking the complete
     // address/register/data frame and only expose the sampled ACK bits for
     // diagnostics.  Bring-up can use 0 when the device ACK line is being
@@ -248,7 +244,7 @@ module i2c_master_write8 #
                     scl_oe_n <= 1'b0;
                     sda_oe_n <= 1'b1;
                     if (tick) begin
-                        if (byte_idx == BYTE_COUNT - 1)
+                        if (byte_idx == 3'd2)
                             state <= ST_STOP_A;
                         else begin
                             byte_idx <= byte_idx + 1'b1;

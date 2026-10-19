@@ -4,24 +4,21 @@
 
 ADAU1979 的采样数据不是通过 SPI 输出。SPI/I2C 只用于配置寄存器，采样数据通过 `BCLK + LRCLK + SDATAOUT` 输出。
 
-两片 ADAU1979 同时采集时，Zynq 的 PL 可以同时接收 U1/U2 的 4 路 SDATA：
+单颗 ADAU1979 采集时，Zynq PL 只使用连接到该器件的两根 SDATA 输入：
 
-- `sdata[0]` = U1 `SDATAOUT01` = U1C1/U1C2
-- `sdata[1]` = U1 `SDATAOUT02` = U1C3/U1C4
-- `sdata[2]` = U2 `SDATAOUT11` = U2C1/U2C2
-- `sdata[3]` = U2 `SDATAOUT12` = U2C3/U2C4
+- `sdata[2]` = `SDATAOUT11` = CH1/CH2
+- `sdata[3]` = `SDATAOUT12` = CH3/CH4
+
+
 
 IP 输出 `m00_axis_tdata[255:0]`，顺序为：
 
 ```text
-[31:0]     U1C1
-[63:32]    U1C2
-[95:64]    U1C3
-[127:96]   U1C4
-[159:128]  U2C1
-[191:160]  U2C2
-[223:192]  U2C3
-[255:224]  U2C4
+[31:0]     CH1（SDATAOUT11 左时隙）
+[63:32]    CH2（SDATAOUT11 右时隙）
+[95:64]    CH3（SDATAOUT12 左时隙）
+[127:96]   CH4（SDATAOUT12 右时隙）
+[255:128]  0（保持原 32 字节帧的填充区）
 ```
 
 ## 2. 默认配置
@@ -32,28 +29,12 @@ IP 输出 `m00_axis_tdata[255:0]`，顺序为：
 - 数据：24 bit，32 bit slot
 - 输出：256 bit AXI-Stream
 - 控制：PL-I2C
-- U1 地址：`0x11`
-- U2 地址：`0x31`
-- U1：slave
-- U2：master，输出 BCLK/LRCLK
+- I²C 7 位地址：`0x11`。
+- 单颗器件为 BCLK/LRCLK 主机，输出音频时钟
 
 ### 小板地址电阻必须修改
 
-原理图中 U1、U2 的 `ADDR1` 和 `ADDR0` 都同时装有 10 kΩ 上拉和 10 kΩ 下拉，分压约为 1.65 V。该电平不是可靠的数字 0/1，而且两片器件会得到相同地址，不能在共用的 I2C 总线上分别配置主从模式。
-
-请按下面方式改成 IP 默认使用的两个地址：
-
-```text
-U1 = 0x11 (ADDR1=0, ADDR0=0)
-  拆除 R11.0、R12.0
-  保留 R13.0、R14.0
-
-U2 = 0x31 (ADDR1=0, ADDR0=1)
-  拆除 R11.1、R14.1
-  保留 R13.1、R12.1
-```
-
-焊接后断电测量：U1 的 ADDR1/ADDR0 都应接近 0 V；U2 的 ADDR1 应接近 0 V、ADDR0 应接近 3.3 V。未完成这一步时，PL-I2C 初始化会出现 ACK 错误或两片器件被写入相同配置。
+单颗器件的 ADDR1/ADDR0 必须按硬件设置为 7 位地址 `0x11`（ADDR1=0、ADDR0=0），工程中不存在第二颗器件的地址配置。
 
 ## 3. Vivado 中导入 IP
 
@@ -176,7 +157,7 @@ C:/Users/weitong/Desktop/ADAU1979/examples/vitis_adau1979_dma_test.c
 4. 写采样帧数到 `0x04`。
 5. 写 `0x01` 到 `0x00` 启动采集。
 6. 等 DMA 完成中断或轮询 DMA 完成。
-7. DDR 中每 32 字节是一帧 8 通道数据。
+7. DDR 中每 32 字节是一帧：前 4 个 32 位字为有效通道，后 4 个 32 位字为零填充。
 
 如果 Vitis 编译时报 `XPAR_AXIDMA_0_DEVICE_ID` 或 `XPAR_ADAU1979_CAPTURE_0_C_S00_AXI_BASEADDR` 未定义，打开 BSP 生成的 `xparameters.h`，把例程开头的这两个宏改成你工程里实际的名字：
 
@@ -190,5 +171,5 @@ C:/Users/weitong/Desktop/ADAU1979/examples/vitis_adau1979_dma_test.c
 - 示波器确认 `MCLK=24.576 MHz`。
 - 初始化完成后确认 `BCLK=3.072 MHz`、`LRCLK=48 kHz`。
 - 确认 `SCL/SDA` 有上拉。
-- 确认 U1 地址为 `0x11`、U2 地址为 `0x31`，不要让地址脚停在 1.65 V。
+- 确认 I²C 7 位地址：`0x11`。
 - 如果 `ERROR_COUNT` 增加，优先检查 I2C ACK 和 I2S 位对齐。

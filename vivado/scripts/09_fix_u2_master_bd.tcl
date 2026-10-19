@@ -1,7 +1,7 @@
-# Repair the BD after switching the ADAU audio-clock ownership to U2.
+# Repair the BD for the single ADAU1979 audio-clock master.
 # This script does not change any ILA settings.
 
-set root {C:/Users/weitong/Desktop/ADAU1979}
+set root {C:/Users/weitong/Desktop/adsingle}
 set project [file join $root vivado ad_slave ad_slave.xpr]
 set bd_file [file join $root vivado ad_slave ad_slave.srcs sources_1 bd design_1 design_1.bd]
 set ip_repo [file join $root ip_repo]
@@ -20,7 +20,7 @@ if {![llength $cell]} {
 # corrected 1.0.6 component.xml (one ASSOCIATED_BUSIF name per clock).
 upgrade_ip $cell
 
-# U2 is the audio-clock master. These external BD ports are therefore inputs
+# The single ADAU1979 is the audio-clock master. These external BD ports are therefore inputs
 # to the FPGA, and feed both the capture IP and the existing ILA probe nets.
 foreach name {adau_bclk adau_lrclk} {
     set port [get_bd_ports -quiet $name]
@@ -36,5 +36,5 @@ reset_target all $bd_obj
 generate_target all $bd_obj
 validate_bd_design
 report_ip_status
-puts "U2-master BD repair completed; ILA settings were not changed."
+puts "Single-device audio-master BD repair completed; ILA settings were not changed."
 close_project

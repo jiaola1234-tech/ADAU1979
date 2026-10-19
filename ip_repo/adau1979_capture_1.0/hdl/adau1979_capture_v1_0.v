@@ -10,9 +10,7 @@ module adau1979_capture_v1_0 #
     parameter integer I2S_DELAY = 1,
     parameter integer FIFO_ADDR_WIDTH = 10,
     parameter integer CLK_HZ = 50000000,
-    parameter integer I2C_HZ = 100000,
-    parameter [6:0] U1_I2C_ADDR = 7'h11,
-    parameter [6:0] U2_I2C_ADDR = 7'h31
+    parameter integer I2C_HZ = 100000
 )
 (
     input  wire        adau_bclk,
@@ -97,9 +95,7 @@ module adau1979_capture_v1_0 #
         .I2S_DELAY(I2S_DELAY),
         .FIFO_ADDR_WIDTH(FIFO_ADDR_WIDTH),
         .CLK_HZ(CLK_HZ),
-        .I2C_HZ(I2C_HZ),
-        .U1_I2C_ADDR(U1_I2C_ADDR),
-        .U2_I2C_ADDR(U2_I2C_ADDR)
+        .I2C_HZ(I2C_HZ)
     ) s00_axi_inst (
         .adau_bclk(adau_bclk),
         .adau_lrclk(adau_lrclk),

@@ -1,7 +1,7 @@
 # Build the generated ADAU1979 Vivado project and export hardware for Vitis.
 # Run after 01_clone_and_patch_ad7606_project.tcl and 03_check_adau1979_project.tcl.
 
-set adau_root_dir {C:/Users/weitong/Desktop/ADAU1979}
+set adau_root_dir {C:/Users/weitong/Desktop/adsingle}
 set adau_default_xpr [file join $adau_root_dir vivado adau1979_lwip adau1979_lwip.xpr]
 set adau_xsa_file [file join $adau_root_dir vivado adau1979_lwip adau1979_lwip.xsa]
 
@@ -33,6 +33,9 @@ if {[llength $adau_bd_files]} {
 }
 
 update_compile_order -fileset sources_1
+# The BD wrapper is the FPGA top; the capture IP itself must not be synthesized as the top-level design.
+set_property top design_1_wrapper [get_filesets sources_1]
+set_property top design_1_wrapper [get_filesets sim_1]
 
 # Regenerating the BD can invalidate an existing completed run. Reset both
 # run records before launching so the script is repeatable across Vivado

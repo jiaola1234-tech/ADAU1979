@@ -2,7 +2,7 @@
 # AX7020 UART_TX is PS MIO48 and UART_RX is PS MIO49, using physical UART1.
 # Run this script from the Vivado Tcl Console with the ADAU1979 project open.
 
-set adau_root_dir {C:/Users/weitong/Desktop/ADAU1979}
+set adau_root_dir {C:/Users/weitong/Desktop/adsingle}
 set adau_default_xpr [file join $adau_root_dir vivado adau1979_lwip adau1979_lwip.xpr]
 
 if {![llength [current_project -quiet]]} {

@@ -11,8 +11,6 @@ proc init_gui { IPINST } {
   ipgui::add_param $IPINST -name "I2S_DELAY" -parent ${Page_0}
   ipgui::add_param $IPINST -name "LR_POLARITY" -parent ${Page_0}
   ipgui::add_param $IPINST -name "SLOT_BITS" -parent ${Page_0}
-  ipgui::add_param $IPINST -name "U1_I2C_ADDR" -parent ${Page_0}
-  ipgui::add_param $IPINST -name "U2_I2C_ADDR" -parent ${Page_0}
   ipgui::add_param $IPINST -name "WORD_BITS" -parent ${Page_0}
 
 
@@ -90,23 +88,7 @@ proc validate_PARAM_VALUE.SLOT_BITS { PARAM_VALUE.SLOT_BITS } {
 	return true
 }
 
-proc update_PARAM_VALUE.U1_I2C_ADDR { PARAM_VALUE.U1_I2C_ADDR } {
-	# Procedure called to update U1_I2C_ADDR when any of the dependent parameters in the arguments change
-}
 
-proc validate_PARAM_VALUE.U1_I2C_ADDR { PARAM_VALUE.U1_I2C_ADDR } {
-	# Procedure called to validate U1_I2C_ADDR
-	return true
-}
-
-proc update_PARAM_VALUE.U2_I2C_ADDR { PARAM_VALUE.U2_I2C_ADDR } {
-	# Procedure called to update U2_I2C_ADDR when any of the dependent parameters in the arguments change
-}
-
-proc validate_PARAM_VALUE.U2_I2C_ADDR { PARAM_VALUE.U2_I2C_ADDR } {
-	# Procedure called to validate U2_I2C_ADDR
-	return true
-}
 
 proc update_PARAM_VALUE.WORD_BITS { PARAM_VALUE.WORD_BITS } {
 	# Procedure called to update WORD_BITS when any of the dependent parameters in the arguments change
@@ -162,14 +144,3 @@ proc update_MODELPARAM_VALUE.I2C_HZ { MODELPARAM_VALUE.I2C_HZ PARAM_VALUE.I2C_HZ
 	# Procedure called to set VHDL generic/Verilog parameter value(s) based on TCL parameter value
 	set_property value [get_property value ${PARAM_VALUE.I2C_HZ}] ${MODELPARAM_VALUE.I2C_HZ}
 }
-
-proc update_MODELPARAM_VALUE.U1_I2C_ADDR { MODELPARAM_VALUE.U1_I2C_ADDR PARAM_VALUE.U1_I2C_ADDR } {
-	# Procedure called to set VHDL generic/Verilog parameter value(s) based on TCL parameter value
-	set_property value [get_property value ${PARAM_VALUE.U1_I2C_ADDR}] ${MODELPARAM_VALUE.U1_I2C_ADDR}
-}
-
-proc update_MODELPARAM_VALUE.U2_I2C_ADDR { MODELPARAM_VALUE.U2_I2C_ADDR PARAM_VALUE.U2_I2C_ADDR } {
-	# Procedure called to set VHDL generic/Verilog parameter value(s) based on TCL parameter value
-	set_property value [get_property value ${PARAM_VALUE.U2_I2C_ADDR}] ${MODELPARAM_VALUE.U2_I2C_ADDR}
-}
-

@@ -1,7 +1,7 @@
 # Replace the legacy ADAU1979 capture instance in the ad_slave project with
 # the dedicated audio-serial-slave IP.  The legacy IP remains in ip_repo.
 
-set root_dir {C:/Users/weitong/Desktop/ADAU1979}
+set root_dir {C:/Users/weitong/Desktop/adsingle}
 set project_file [file join $root_dir vivado ad_slave ad_slave.xpr]
 set repo_dir [file join $root_dir ip_repo]
 
@@ -18,9 +18,9 @@ if {$bd_file eq ""} {
 }
 open_bd_design $bd_file
 
-set ipdef [lindex [get_ipdefs -quiet -all user.org:user:adau1979_capture_slave:1.0.2] end]
+set ipdef [lindex [get_ipdefs -quiet -all user.org:user:adau1979_capture_slave:1.1.3] end]
 if {$ipdef eq ""} {
-    error "New IP user.org:user:adau1979_capture_slave:1.0.2 is not in the catalog."
+    error "New IP user.org:user:adau1979_capture_slave:1.1.3 is not in the catalog."
 }
 
 set old_cell [get_bd_cells -quiet adau1979_capture_0]
@@ -48,8 +48,6 @@ set_property -dict [list \
     CONFIG.WORD_BITS {24} \
     CONFIG.LR_POLARITY {1} \
     CONFIG.I2S_DELAY {1} \
-    CONFIG.U1_I2C_ADDR {0010001} \
-    CONFIG.U2_I2C_ADDR {0010001} \
 ] $capture
 
 set dma [get_bd_cells -quiet axi_dma_0]
@@ -115,18 +113,16 @@ if {[llength $ila]} {
     set_property -dict [list \
         CONFIG.C_MONITOR_TYPE {Native} \
         CONFIG.C_ENABLE_ILA_AXI_MON {false} \
-        CONFIG.C_NUM_OF_PROBES {8} \
+        CONFIG.C_NUM_OF_PROBES {6} \
         CONFIG.C_PROBE0_WIDTH {1} \
         CONFIG.C_PROBE1_WIDTH {1} \
         CONFIG.C_PROBE2_WIDTH {1} \
         CONFIG.C_PROBE3_WIDTH {64} \
         CONFIG.C_PROBE4_WIDTH {1} \
         CONFIG.C_PROBE5_WIDTH {1} \
-        CONFIG.C_PROBE6_WIDTH {4} \
-        CONFIG.C_PROBE7_WIDTH {1} \
-        CONFIG.C_DATA_DEPTH {2048} \
+        CONFIG.C_DATA_DEPTH {4096} \
     ] $ila
-    foreach probe_name {probe0 probe1 probe2 probe3 probe4 probe5 probe6 probe7} {
+    foreach probe_name {probe0 probe1 probe2 probe3 probe4 probe5} {
         disconnect_endpoint [get_bd_pins $ila/$probe_name]
     }
     connect_bd_net [get_bd_pins $capture/i2c_scl_dbg] [get_bd_pins $ila/probe0]
@@ -135,8 +131,6 @@ if {[llength $ila]} {
     connect_bd_net [get_bd_pins $capture/i2c_debug] [get_bd_pins $ila/probe3]
     connect_bd_net [get_bd_pins $capture/adau_bclk] [get_bd_pins $ila/probe4]
     connect_bd_net [get_bd_pins $capture/adau_lrclk] [get_bd_pins $ila/probe5]
-    connect_bd_net [get_bd_ports adau_sdata] [get_bd_pins $ila/probe6]
-    connect_bd_net [get_bd_pins $capture/m00_axis_tvalid] [get_bd_pins $ila/probe7]
 }
 
 set segs [get_bd_addr_segs -quiet $capture/S00_AXI/*]
@@ -165,5 +159,5 @@ update_compile_order -fileset sources_1
 if {[file exists $project_file]} {
     update_ip_catalog
 }
-puts "ad_slave now uses user.org:user:adau1979_capture_slave:1.0.2 with raw SDATAOUT and AXIS-valid ILA probes"
+puts "ad_slave now uses user.org:user:adau1979_capture_slave:1.1.3 with raw SDATAOUT and AXIS-valid ILA probes"
 close_project

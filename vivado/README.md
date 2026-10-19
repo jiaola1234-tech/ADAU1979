@@ -3,10 +3,10 @@
 This folder contains the Vivado-side files for replacing the original AD7606
 capture block with the ADAU1979 capture IP.
 
-Before powering the board, set unique I2C addresses. Remove `R11.0/R12.0` for
-U1 address `0x11`; remove `R11.1/R14.1` for U2 address `0x31`. The schematic
-otherwise biases every ADDR pin to about 1.65 V and both devices cannot be
-configured independently on the shared bus.
+The current build uses one ADAU1979 only. Strap that device for the fixed
+7-bit I²C address `0x11` (ADDR1=0, ADDR0=0). The old U1/U2 address text from
+the two-device prototype is no longer part of the RTL, IP parameters, or block
+design.
 
 ## Recommended Flow
 

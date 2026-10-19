@@ -1,14 +1,13 @@
 {
   "design": {
     "design_info": {
-      "boundary_crc": "0x221C7062B6D64E3E",
+      "boundary_crc": "0x1261D0A6692C0385",
       "device": "xc7z020clg400-2",
       "gen_directory": "../../../../adau1979_lwip.gen/sources_1/bd/design_1",
       "name": "design_1",
       "rev_ctrl_bd_flag": "RevCtrlBdOff",
       "synth_flow_mode": "Hierarchical",
-      "tool_version": "2022.2",
-      "validated": "true"
+      "tool_version": "2022.2"
     },
     "design_tree": {
       "processing_system7_0": "",
@@ -209,10 +208,10 @@
     },
     "ports": {
       "adau_bclk": {
-        "direction": "O"
+        "direction": "I"
       },
       "adau_lrclk": {
-        "direction": "O"
+        "direction": "I"
       },
       "adau_sdata": {
         "direction": "I",
@@ -220,16 +219,10 @@
         "right": "0"
       },
       "adau_pd_rst": {
-        "direction": "O",
-        "parameters": {
-          "POLARITY": {
-            "value": "ACTIVE_LOW",
-            "value_src": "default_prop"
-          }
-        }
+        "direction": "O"
       },
       "adau_scl": {
-        "direction": "IO"
+        "direction": "O"
       },
       "adau_sda": {
         "direction": "IO"
@@ -3098,9 +3091,9 @@
         }
       },
       "adau1979_capture_0": {
-        "vlnv": "user.org:user:adau1979_capture_slave:1.0.3",
-        "xci_name": "design_1_adau1979_capture_0_10",
-        "xci_path": "ip\\design_1_adau1979_capture_0_10_1\\design_1_adau1979_capture_0_10.xci",
+        "vlnv": "user.org:user:adau1979_capture:1.1",
+        "xci_name": "design_1_adau1979_capture_0_8",
+        "xci_path": "ip\\design_1_adau1979_capture_0_8\\design_1_adau1979_capture_0_8.xci",
         "inst_hier_path": "adau1979_capture_0",
         "parameters": {
           "CLK_HZ": {
@@ -3228,8 +3221,8 @@
       },
       "adau1979_capture_0_adau_scl": {
         "ports": [
-          "adau_scl",
-          "adau1979_capture_0/adau_scl"
+          "adau1979_capture_0/adau_scl",
+          "adau_scl"
         ]
       },
       "adau1979_capture_0_i2c_debug": {
@@ -3278,9 +3271,14 @@
           "axi_interconnect_0/M00_ACLK",
           "axi_dma_0/m_axi_s2mm_aclk",
           "axi_interconnect_0/S01_ACLK",
-          "ila_i2c_debug/clk",
           "adau1979_capture_0/m00_axis_aclk",
           "adau1979_capture_0/s00_axi_aclk"
+        ]
+      },
+      "processing_system7_0_FCLK_CLK2": {
+        "ports": [
+          "processing_system7_0/FCLK_CLK2",
+          "ila_i2c_debug/clk"
         ]
       },
       "processing_system7_0_FCLK_RESET0_N": {

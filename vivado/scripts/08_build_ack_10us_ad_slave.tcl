@@ -2,7 +2,7 @@
 # The packaged RTL holds each slave ACK high phase for 10 us while data bits
 # remain at 100 kHz. The original 100 kHz bit/ltx are backed up separately.
 
-set root_dir {C:/Users/weitong/Desktop/ADAU1979}
+set root_dir {C:/Users/weitong/Desktop/adsingle}
 set project_file [file join $root_dir vivado ad_slave ad_slave.xpr]
 set output_dir [file join $root_dir vivado ad_slave ack_test_10us]
 

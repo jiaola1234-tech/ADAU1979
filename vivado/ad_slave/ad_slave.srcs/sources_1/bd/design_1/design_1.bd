@@ -229,7 +229,7 @@
         }
       },
       "adau_scl": {
-        "direction": "IO"
+        "direction": "O"
       },
       "adau_sda": {
         "direction": "IO"
@@ -3132,12 +3132,6 @@
           },
           "SLOT_BITS": {
             "value": "32"
-          },
-          "U1_I2C_ADDR": {
-            "value": "0010001"
-          },
-          "U2_I2C_ADDR": {
-            "value": "0110001"
           },
           "WORD_BITS": {
             "value": "24"

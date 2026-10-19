@@ -6,7 +6,7 @@
  * 2. Wait for PL-I2C ADAU1979 initialization to finish.
  * 3. Arm DMA receive.
  * 4. Start the ADAU1979 capture IP.
- * 5. Print the first captured 8-channel frames.
+ * 5. Print the first captured 4-channel frame (words 4..7 are zero padding).
  */
 
 #include "xparameters.h"

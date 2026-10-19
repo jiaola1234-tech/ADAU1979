@@ -1,9 +1,9 @@
 # Replace the old AD7606 capture block in the opened project with the new
 # ADAU1979 capture IP. Run this after opening or cloning the original project.
 
-set adau_root_dir {C:/Users/weitong/Desktop/ADAU1979}
-set adau_ip_repo_dir {C:/Users/weitong/Desktop/ADAU1979/ip_repo}
-set adau_xdc_file {C:/Users/weitong/Desktop/ADAU1979/vivado/constraints/ax7020_adau1979_j11.xdc}
+set adau_root_dir {C:/Users/weitong/Desktop/adsingle}
+set adau_ip_repo_dir {C:/Users/weitong/Desktop/adsingle/ip_repo}
+set adau_xdc_file {C:/Users/weitong/Desktop/adsingle/vivado/constraints/ax7020_adau1979_j11.xdc}
 
 if {![llength [current_project -quiet]]} {
     error "Open a Vivado project first, then source this script."
@@ -25,7 +25,7 @@ update_ip_catalog -rebuild
 
 if {[file exists $adau_xdc_file]} {
     if {![llength [get_files -quiet $adau_xdc_file]]} {
-    add_files -fileset constrs_1 -norecurse {C:/Users/weitong/Desktop/ADAU1979/vivado/constraints/ax7020_adau1979_j11.xdc}
+    add_files -fileset constrs_1 -norecurse {C:/Users/weitong/Desktop/adsingle/vivado/constraints/ax7020_adau1979_j11.xdc}
     }
 } else {
     error "Cannot find ADAU1979 XDC file: $adau_xdc_file"
@@ -45,9 +45,9 @@ if {![llength $adau_bd_files]} {
 }
 open_bd_design [lindex $adau_bd_files 0]
 
-set adau_ip_vlnv [get_ipdefs -quiet -all user.org:user:adau1979_capture_slave:1.0]
+set adau_ip_vlnv [get_ipdefs -quiet -all user.org:user:adau1979_capture:1.1]
 if {![llength $adau_ip_vlnv]} {
-    error "Cannot find user.org:user:adau1979_capture_slave:1.0 in the IP catalog."
+    error "Cannot find user.org:user:adau1979_capture:1.1 in the IP catalog."
 }
 set adau_ip_vlnv [lindex $adau_ip_vlnv end]
 
@@ -161,9 +161,8 @@ connect_bd_net [get_bd_pins adau1979_capture_0/adau_scl] [get_bd_ports adau_scl]
 connect_bd_net [get_bd_pins adau1979_capture_0/adau_sda] [get_bd_ports adau_sda]
 
 # Add an ILA for the I2C bring-up and audio-capture paths.  In addition to
-# the actual external pins and internal initialization state, probe the raw
-# four-bit SDATAOUT bus and AXI-stream valid pulse.  This lets the capture be
-# checked even when I2C initialization reports an error.
+# the actual external pins and internal initialization state. Six native
+# probes are kept to match the checked-in BD/XCI.
 if {[llength [get_bd_cells -quiet ila_i2c_debug]]} {
     delete_bd_objs [get_bd_cells ila_i2c_debug]
 }
@@ -175,18 +174,18 @@ create_bd_cell -type ip -vlnv xilinx.com:ip:ila:6.2 ila_i2c_debug
 set_property CONFIG.C_MONITOR_TYPE {Native} [get_bd_cells ila_i2c_debug]
 set_property -dict [list \
     CONFIG.C_ENABLE_ILA_AXI_MON {false} \
-     CONFIG.C_NUM_OF_PROBES {8} \
+    CONFIG.C_NUM_OF_PROBES {6} \
     CONFIG.C_PROBE0_WIDTH {1} \
     CONFIG.C_PROBE1_WIDTH {1} \
     CONFIG.C_PROBE2_WIDTH {1} \
     CONFIG.C_PROBE3_WIDTH {64} \
     CONFIG.C_PROBE4_WIDTH {1} \
     CONFIG.C_PROBE5_WIDTH {1} \
-     CONFIG.C_PROBE6_WIDTH {4} \
-     CONFIG.C_PROBE7_WIDTH {1} \
-     CONFIG.C_DATA_DEPTH {2048} \
+     CONFIG.C_DATA_DEPTH {4096} \
 ] [get_bd_cells ila_i2c_debug]
-connect_bd_net [get_bd_pins processing_system7_0/FCLK_CLK0] \
+# The ILA is clocked from PS FCLK_CLK2, configured to 50 MHz.  The AXI/audio
+# path remains on FCLK_CLK0 (100 MHz); keep those clock domains separate.
+connect_bd_net [get_bd_pins processing_system7_0/FCLK_CLK2] \
                [get_bd_pins ila_i2c_debug/clk]
 connect_bd_net [get_bd_pins adau1979_capture_0/i2c_scl_dbg] \
                [get_bd_pins ila_i2c_debug/probe0]
@@ -204,11 +203,6 @@ connect_bd_net [get_bd_ports adau_bclk] \
                [get_bd_pins ila_i2c_debug/probe4]
 connect_bd_net [get_bd_ports adau_lrclk] \
                [get_bd_pins ila_i2c_debug/probe5]
-connect_bd_net [get_bd_ports adau_sdata] \
-               [get_bd_pins ila_i2c_debug/probe6]
-connect_bd_net [get_bd_pins adau1979_capture_0/m00_axis_tvalid] \
-               [get_bd_pins ila_i2c_debug/probe7]
-
 # M00 controls AXI DMA and M01 controls ADAU1979. M02 has no slave and only
 # creates an incomplete address path warning.
 set_property CONFIG.NUM_MI {2} [get_bd_cells ps7_0_axi_periph]

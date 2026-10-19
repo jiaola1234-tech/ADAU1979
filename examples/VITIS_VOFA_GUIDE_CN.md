@@ -1,14 +1,14 @@
-# ADAU1979 八通道 VOFA 测试步骤
+# ADAU1979 四通道 VOFA 测试步骤
 
 ## 当前测试链路
 
 ```text
-ADAU1979 x 2 -> PL I2S 接收 -> 256 bit AXI-Stream
+单颗 ADAU1979 -> PL I2S 接收 -> 256 bit AXI-Stream
               -> AXI DMA S2MM -> DDR -> PS UART1 -> VOFA
 ```
 
 - ADAU1979 原始采样率：默认按 48 kHz 处理。
-- 每个采样帧：8 路，每路为符号扩展后的 32 bit 数据。
+- 每个采样帧：4 路，每路为符号扩展后的 32 bit 数据。
 - DMA：每次接收 1024 帧，即 32768 字节。
 - 串口输出：每 48 个采样帧输出 1 帧，约为 1 kHz。
 - VOFA 数据：8 个 `float`，后接 JustFloat 帧尾 `00 00 80 7F`。
@@ -98,8 +98,8 @@ XPAR_PS7_UART_1_DEVICE_ID
 程序启动后会：
 
 1. 将 PS UART1 设置为 921600、8 数据位、无校验、1 停止位。
-2. 等待 PL 端完成两片 ADAU1979 的 I2C 初始化。
-3. 用 AXI DMA 反复接收八通道数据。
+2. 等待 PL 端完成单颗 ADAU1979 的 I2C 初始化。
+3. 用 AXI DMA 反复接收四通道数据。
 4. 抽取为约 1 kHz，并持续发送 JustFloat 二进制帧。
 
 代码进入数据发送后不能再调用 `xil_printf`，否则文本会破坏 VOFA 二进制帧。
@@ -115,21 +115,21 @@ XPAR_PS7_UART_1_DEVICE_ID
 曲线顺序为：
 
 ```text
-ch0 = U1C1
-ch1 = U1C2
-ch2 = U1C3
-ch3 = U1C4
-ch4 = U2C1
-ch5 = U2C2
-ch6 = U2C3
-ch7 = U2C4
+ch0 = CH1
+ch1 = CH2
+ch2 = CH3
+ch3 = CH4
+ch4 = CH1
+ch5 = CH2
+ch6 = CH3
+ch7 = CH4
 ```
 
 ## 六、第一次上板的检查顺序
 
 1. 先给一个通道输入低频正弦波，例如 100 Hz，其他通道接地或保持稳定。
 2. 检查 VOFA 中是否只有对应通道出现正弦波。
-3. 依次移动输入，核对八通道顺序。
+3. 依次移动输入，核对四通道顺序。
 4. 若完全无数据，先检查 I2C 地址、`PD/RST`、MCLK、BCLK 和 LRCLK。
 5. 若有数据但波形失真或通道交错，检查 I2S 模式、LRCLK 极性、24 bit 数据宽度和 32 bit slot 设置。
 

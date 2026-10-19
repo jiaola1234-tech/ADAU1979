@@ -1,7 +1,7 @@
 # Run from a fresh Vivado Tcl Console or with:
-#   vivado -mode batch -source C:/Users/weitong/Desktop/ADAU1979/vivado/scripts/00_package_adau1979_ip.tcl
+#   vivado -mode batch -source C:/Users/weitong/Desktop/adsingle/vivado/scripts/00_package_adau1979_ip.tcl
 
-set adau_root_dir {C:/Users/weitong/Desktop/ADAU1979}
+set adau_root_dir {C:/Users/weitong/Desktop/adsingle}
 set adau_ip_pack_script [file join $adau_root_dir ip_repo adau1979_capture_1.0 scripts package_ip.tcl]
 
 if {![file exists $adau_ip_pack_script]} {

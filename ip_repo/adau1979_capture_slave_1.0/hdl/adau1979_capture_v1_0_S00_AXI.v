@@ -10,9 +10,7 @@ module adau1979_capture_v1_0_S00_AXI #
     parameter integer I2S_DELAY = 1,
     parameter integer FIFO_ADDR_WIDTH = 10,
     parameter integer CLK_HZ = 50000000,
-    parameter integer I2C_HZ = 100000,
-    parameter [6:0] U1_I2C_ADDR = 7'h11,
-    parameter [6:0] U2_I2C_ADDR = 7'h31
+    parameter integer I2C_HZ = 100000
 )
 (
     input  wire        adau_bclk,
@@ -126,12 +124,6 @@ module adau1979_capture_v1_0_S00_AXI #
     wire i2c_debug_pll_read_data_valid;
     wire i2c_debug_write_done;
     wire i2c_debug_write_ack_error;
-    wire i2c_debug_scan_done;
-    wire [6:0] i2c_debug_scan_dev_addr;
-    wire [7:0] i2c_debug_scan_read_data;
-    wire i2c_debug_scan_ack_error;
-    wire i2c_debug_scan_read_addr_ack;
-    wire i2c_debug_scan_read_data_valid;
     wire i2c_debug_verify_done;
     wire i2c_debug_verify_read_addr_ack;
     wire i2c_debug_verify_read_data_valid;
@@ -151,7 +143,7 @@ module adau1979_capture_v1_0_S00_AXI #
 
     // 64-bit trace entry format:
     // [63:60] event type (0=WRITE, 1=PLL_READ, 2=INIT_DONE,
-    //                    3=ADDRESS_SCAN, 4=VERIFY_READ)
+    //                    1=PLL_READ, 2=INIT_DONE)
     // [59:52] init_step, [51:45] device, [44:37] register
     // [36:29] write/read data, [28:26] ACK bits, [25] error
     // For read events ACK bits are {data_valid, read_addr_ack, !ack_error}.
@@ -159,13 +151,10 @@ module adau1979_capture_v1_0_S00_AXI #
     wire debug_log_write_event = i2c_debug_write_done;
     wire debug_log_pll_event = i2c_debug_pll_done;
     wire debug_log_done_event = !init_busy && (init_done || init_error) && !init_finished_d;
-    wire debug_log_scan_event = i2c_debug_scan_done;
     wire debug_log_verify_event = i2c_debug_verify_done;
 
-    // BCLK/LRCLK are external inputs from U2.  The FPGA must not instantiate
-    // or connect a second clock generator here: that would contend with U2 on
-    // the shared audio-clock traces.  The I2S receiver synchronizes these
-    // inputs into S_AXI_ACLK below.
+    // BCLK/LRCLK are external inputs from the single ADAU1979.
+    // The receiver synchronizes these inputs into S_AXI_ACLK below.
 
     // ILA probe bus.  This is intentionally not an AXI register: it exposes
     // the live I2C pin/control state and the last completed write transaction.
@@ -390,17 +379,6 @@ module adau1979_capture_v1_0_S00_AXI #
                     debug_log_wr_ptr <= debug_log_wr_ptr + 1'b1;
                     if (debug_log_count != 6'd63)
                         debug_log_count <= debug_log_count + 1'b1;
-                end else if (debug_log_scan_event) begin
-                    debug_log[debug_log_wr_ptr] <= {
-                        4'h3, init_step, i2c_debug_scan_dev_addr, 8'h00,
-                        i2c_debug_scan_read_data,
-                        {i2c_debug_scan_read_data_valid, i2c_debug_scan_read_addr_ack,
-                         !i2c_debug_scan_ack_error},
-                        i2c_debug_scan_ack_error, i2c_debug_scan_read_data[7],
-                        8'd0, 16'd0};
-                    debug_log_wr_ptr <= debug_log_wr_ptr + 1'b1;
-                    if (debug_log_count != 6'd63)
-                        debug_log_count <= debug_log_count + 1'b1;
                 end else if (debug_log_verify_event) begin
                     debug_log[debug_log_wr_ptr] <= {
                         4'h4, init_step, i2c_last_dev_addr, i2c_last_reg_addr,
@@ -492,9 +470,7 @@ module adau1979_capture_v1_0_S00_AXI #
 
     adau1979_i2c_init #(
         .CLK_HZ(CLK_HZ),
-        .I2C_HZ(I2C_HZ),
-        .U1_ADDR(U1_I2C_ADDR),
-        .U2_ADDR(U2_I2C_ADDR)
+        .I2C_HZ(I2C_HZ)
     ) adau1979_i2c_init_i (
         .clk(S_AXI_ACLK),
         .rstn(S_AXI_ARESETN),
@@ -520,12 +496,6 @@ module adau1979_capture_v1_0_S00_AXI #
         .debug_pll_read_data_valid(i2c_debug_pll_read_data_valid),
         .debug_write_done(i2c_debug_write_done),
         .debug_write_ack_error(i2c_debug_write_ack_error),
-        .debug_scan_done(i2c_debug_scan_done),
-        .debug_scan_dev_addr(i2c_debug_scan_dev_addr),
-        .debug_scan_read_data(i2c_debug_scan_read_data),
-        .debug_scan_ack_error(i2c_debug_scan_ack_error),
-        .debug_scan_read_addr_ack(i2c_debug_scan_read_addr_ack),
-        .debug_scan_read_data_valid(i2c_debug_scan_read_data_valid),
         .debug_verify_done(i2c_debug_verify_done),
         .debug_verify_read_addr_ack(i2c_debug_verify_read_addr_ack),
         .debug_verify_read_data_valid(i2c_debug_verify_read_data_valid),

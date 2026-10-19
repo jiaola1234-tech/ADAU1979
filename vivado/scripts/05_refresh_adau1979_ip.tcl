@@ -1,6 +1,6 @@
 # Refresh the ADAU1979 IP instance in the final project after RTL changes.
 
-set adau_root_dir {C:/Users/weitong/Desktop/ADAU1979}
+set adau_root_dir {C:/Users/weitong/Desktop/adsingle}
 set adau_xpr [file join $adau_root_dir vivado adau1979_lwip adau1979_lwip.xpr]
 
 if {![llength [current_project -quiet]]} {

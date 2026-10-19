@@ -2,9 +2,9 @@
 # replace the AD7606 capture block with the ADAU1979 capture block.
 #
 # Run from a fresh Vivado Tcl Console or with:
-#   vivado -mode batch -source C:/Users/weitong/Desktop/ADAU1979/vivado/scripts/01_clone_and_patch_ad7606_project.tcl
+#   vivado -mode batch -source C:/Users/weitong/Desktop/adsingle/vivado/scripts/01_clone_and_patch_ad7606_project.tcl
 
-set adau_root_dir {C:/Users/weitong/Desktop/ADAU1979}
+set adau_root_dir {C:/Users/weitong/Desktop/adsingle}
 set adau_src_xpr {C:/Users/weitong/Desktop/finalversion/vivado/ad7606_lwip.xpr}
 set adau_src_dir [file dirname $adau_src_xpr]
 set adau_dst_dir [file join $adau_root_dir vivado adau1979_lwip]

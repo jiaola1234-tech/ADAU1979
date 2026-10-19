@@ -6,7 +6,6 @@ add_files -norecurse {
     C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_slave_1.0/hdl/adau1979_capture_core.v
     C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_slave_1.0/hdl/adau1979_i2s_rx.v
     C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_slave_1.0/hdl/adau1979_i2c_init.v
-    C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_slave_1.0/hdl/adau_audio_clock_gen.v
     C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_slave_1.0/hdl/i2c_master_write8.v
     C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_slave_1.0/hdl/i2c_master_read8.v
     C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_slave_1.0/hdl/axis_fifo_256.v
@@ -19,9 +18,9 @@ set core [ipx::current_core]
 set_property name adau1979_capture_slave $core
 # Bump the packaged IP version whenever the RTL changes so Vivado can
 # identify the new implementation and offer an IP upgrade in the BD.
-set_property version 1.1.2 $core
-set_property display_name {ADAU1979 8CH Capture - U1 Master, U1 First, ACK Only} $core
-set_property description {Dual ADAU1979 capture with U1 as audio serial clock master, initialized before U2; write ACK checked without readback compare} $core
+set_property version 1.1.3 $core
+set_property display_name {ADAU1979 4CH Capture} $core
+set_property description {Single ADAU1979 4-channel I2S capture at fixed 7-bit I2C address 0x11 with 256-bit AXI-Stream output} $core
 set_property vendor_display_name {User} $core
 set_property company_url {https://example.local} $core
 

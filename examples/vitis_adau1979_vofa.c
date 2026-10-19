@@ -42,8 +42,9 @@
 #define VOFA_OUTPUT_RATE        1000u
 #define VOFA_DECIMATION        (AUDIO_SAMPLE_RATE / VOFA_OUTPUT_RATE)
 #define CAPTURE_FRAMES          1024u
+#define VALID_CHANNELS          4u
 #define WORDS_PER_FRAME         8u
-#define BYTES_PER_FRAME         (WORDS_PER_FRAME * sizeof(u32))
+#define BYTES_PER_FRAME         32u
 #define DMA_RX_BYTES            (CAPTURE_FRAMES * BYTES_PER_FRAME)
 #define UART_BAUD_RATE          921600u
 #define INIT_TIMEOUT_LOOPS      5000000u
@@ -209,11 +210,11 @@ static float adc_word_to_float(u32 word)
 
 static int send_vofa_frame(const u32 *frame)
 {
-    float values[WORDS_PER_FRAME];
+    float values[VALID_CHANNELS];
     static const u8 justfloat_tail[4] = {0x00u, 0x00u, 0x80u, 0x7Fu};
     u32 channel;
 
-    for (channel = 0u; channel < WORDS_PER_FRAME; channel++)
+    for (channel = 0u; channel < VALID_CHANNELS; channel++)
         values[channel] = adc_word_to_float(frame[channel]);
 
     if (uart_send_blocking((const u8 *)values, sizeof(values)) != XST_SUCCESS)

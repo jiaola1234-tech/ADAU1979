@@ -45,7 +45,9 @@ module adau1979_i2s_rx #
     reg [WORD_BITS-1:0]       sh1;
     reg [WORD_BITS-1:0]       sh2;
     reg [WORD_BITS-1:0]       sh3;
-    reg [31:0]                ch [0:7];
+    // The single ADAU1979 is wired to sdata[2]/sdata[3] (SDATAOUT11/12).
+    reg [31:0]                left_w2;
+    reg [31:0]                left_w3;
     reg [BIT_COUNT_WIDTH-1:0] delay_left;
     reg                       frame_seen;
 
@@ -97,8 +99,8 @@ module adau1979_i2s_rx #
             frame_data <= 256'd0;
             frame_count <= 32'd0;
             sync_error_count <= 32'd0;
-            for (i = 0; i < 8; i = i + 1)
-                ch[i] <= 32'd0;
+            left_w2 <= 32'd0;
+            left_w3 <= 32'd0;
         end else if (clear) begin
             // A new DMA packet must begin on a fresh LRCLK boundary.  Do
             // not allow the odd-channel half of the previous frame to be
@@ -113,8 +115,8 @@ module adau1979_i2s_rx #
             frame_seen <= 1'b0;
             frame_valid <= 1'b0;
             frame_data <= 256'd0;
-            for (i = 0; i < 8; i = i + 1)
-                ch[i] <= 32'd0;
+            left_w2 <= 32'd0;
+            left_w3 <= 32'd0;
         end else begin
             frame_valid <= 1'b0;
 
@@ -140,21 +142,12 @@ module adau1979_i2s_rx #
 
                     if (bit_idx == WORD_LAST) begin
                         if (slot_idx == 1'b0) begin
-                            ch[0] <= next_w0;
-                            ch[2] <= next_w1;
-                            ch[4] <= next_w2;
-                            ch[6] <= next_w3;
+                            left_w2 <= next_w2;
+                            left_w3 <= next_w3;
                         end else begin
-                            ch[1] <= next_w0;
-                            ch[3] <= next_w1;
-                            ch[5] <= next_w2;
-                            ch[7] <= next_w3;
-                            frame_data <= {
-                                next_w3, ch[6],
-                                next_w2, ch[4],
-                                next_w1, ch[2],
-                                next_w0, ch[0]
-                            };
+                            // Low 128 bits are the four valid samples; the
+                            // upper 128 bits are explicit zero padding.
+                            frame_data <= {128'd0, next_w3, left_w3, next_w2, left_w2};
                             frame_valid <= 1'b1;
                             frame_count <= frame_count + 1'b1;
                         end

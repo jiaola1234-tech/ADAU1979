@@ -13,18 +13,18 @@
 #   H4-2  SDA
 #   H4-3  BCLK
 #   H4-4  LCLK / LRCLK
-#   H4-5  SDATAOUT02 = U1 channel 3/4
-#   H4-6  SDATAOUT01 = U1 channel 1/2
-#   H4-7  SDATAOUT12 = U2 channel 3/4
-#   H4-8  SDATAOUT11 = U2 channel 1/2
+#   H4-5  SDATAOUT02 (unused with the single-device wiring)
+#   H4-6  SDATAOUT01 (unused with the single-device wiring)
+#   H4-7  SDATAOUT12 = single-device channels 3/4
+#   H4-8  SDATAOUT11 = single-device channels 1/2
 #   H4-9  PD/RST
 #   H4-10 GND
 #
 # IP channel mapping:
-#   adau_sdata[0] = U1 SDATAOUT01 = U1C1/U1C2
-#   adau_sdata[1] = U1 SDATAOUT02 = U1C3/U1C4
-#   adau_sdata[2] = U2 SDATAOUT11 = U2C1/U2C2
-#   adau_sdata[3] = U2 SDATAOUT12 = U2C3/U2C4
+#   adau_sdata[0] = unused input (kept for the original 4-bit port)
+#   adau_sdata[1] = unused input (kept for the original 4-bit port)
+#   adau_sdata[2] = SDATAOUT11 = channels 1/2
+#   adau_sdata[3] = SDATAOUT12 = channels 3/4
 
 set_property PACKAGE_PIN <PIN_H4_1_SCL>        [get_ports adau_scl]
 set_property PACKAGE_PIN <PIN_H4_2_SDA>        [get_ports adau_sda]

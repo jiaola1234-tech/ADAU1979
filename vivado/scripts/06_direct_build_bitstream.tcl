@@ -1,6 +1,6 @@
 # Single-process Vivado build.  This avoids the Windows cscript run-wrapper
 # (which can fail with "Loading your settings failed (Access is denied)").
-set root {C:/Users/weitong/Desktop/ADAU1979}
+set root {C:/Users/weitong/Desktop/adsingle}
 set xpr [file join $root vivado adau1979_lwip adau1979_lwip.xpr]
 set xsa [file join $root vivado adau1979_lwip adau1979_lwip.xsa]
 open_project $xpr

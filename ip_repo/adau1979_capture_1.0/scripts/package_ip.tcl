@@ -18,8 +18,8 @@ set core [ipx::current_core]
 
 set_property name adau1979_capture $core
 set_property version 1.1 $core
-set_property display_name {ADAU1979 8CH Capture} $core
-set_property description {Dual ADAU1979 8-channel I2S capture with PL I2C initialization and 256-bit AXI-Stream output} $core
+set_property display_name {ADAU1979 4CH Capture} $core
+set_property description {Single ADAU1979 4-channel I2S capture at fixed 7-bit I2C address 0x11 with 256-bit AXI-Stream output} $core
 set_property vendor_display_name {User} $core
 set_property company_url {https://example.local} $core
 

@@ -1008,16 +1008,6 @@
         <spirit:displayName>I2c Hz</spirit:displayName>
         <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.I2C_HZ">100000</spirit:value>
       </spirit:modelParameter>
-      <spirit:modelParameter spirit:dataType="integer">
-        <spirit:name>U1_I2C_ADDR</spirit:name>
-        <spirit:displayName>U1 I2c Addr</spirit:displayName>
-        <spirit:value spirit:format="bitString" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.U1_I2C_ADDR" spirit:bitStringLength="7">&quot;0010001&quot;</spirit:value>
-      </spirit:modelParameter>
-      <spirit:modelParameter spirit:dataType="integer">
-        <spirit:name>U2_I2C_ADDR</spirit:name>
-        <spirit:displayName>U2 I2c Addr</spirit:displayName>
-        <spirit:value spirit:format="bitString" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.U2_I2C_ADDR" spirit:bitStringLength="7">&quot;0110001&quot;</spirit:value>
-      </spirit:modelParameter>
     </spirit:modelParameters>
   </spirit:model>
   <spirit:choices>
@@ -1109,7 +1099,7 @@
       </spirit:file>
     </spirit:fileSet>
   </spirit:fileSets>
-  <spirit:description>Dual ADAU1979 8-channel I2S capture with PL I2C initialization and 256-bit AXI-Stream output</spirit:description>
+  <spirit:description>Single ADAU1979 4-channel I2S capture at fixed 7-bit I2C address 0x11 with 256-bit AXI-Stream output</spirit:description>
   <spirit:parameters>
     <spirit:parameter>
       <spirit:name>C_S00_AXI_DATA_WIDTH</spirit:name>
@@ -1157,16 +1147,6 @@
       <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.I2C_HZ">100000</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
-      <spirit:name>U1_I2C_ADDR</spirit:name>
-      <spirit:displayName>U1 I2c Addr</spirit:displayName>
-      <spirit:value spirit:format="bitString" spirit:resolve="user" spirit:id="PARAM_VALUE.U1_I2C_ADDR" spirit:bitStringLength="7">&quot;0010001&quot;</spirit:value>
-    </spirit:parameter>
-    <spirit:parameter>
-      <spirit:name>U2_I2C_ADDR</spirit:name>
-      <spirit:displayName>U2 I2c Addr</spirit:displayName>
-      <spirit:value spirit:format="bitString" spirit:resolve="user" spirit:id="PARAM_VALUE.U2_I2C_ADDR" spirit:bitStringLength="7">&quot;0110001&quot;</spirit:value>
-    </spirit:parameter>
-    <spirit:parameter>
       <spirit:name>Component_Name</spirit:name>
       <spirit:value spirit:resolve="user" spirit:id="PARAM_VALUE.Component_Name" spirit:order="1">adau1979_capture_v1_0_v1_0</spirit:value>
     </spirit:parameter>
@@ -1203,7 +1183,7 @@
       <xilinx:taxonomies>
         <xilinx:taxonomy>/UserIP</xilinx:taxonomy>
       </xilinx:taxonomies>
-      <xilinx:displayName>ADAU1979 8CH Capture</xilinx:displayName>
+      <xilinx:displayName>ADAU1979 4CH Capture</xilinx:displayName>
       <xilinx:definitionSource>package_project</xilinx:definitionSource>
       <xilinx:vendorDisplayName>User</xilinx:vendorDisplayName>
       <xilinx:vendorURL>https://example.local</xilinx:vendorURL>
