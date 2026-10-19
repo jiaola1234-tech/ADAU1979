@@ -82,6 +82,9 @@ module adau1979_capture_v1_0 #
     // directly: Vivado's implementation DRC rejects those loads.  SCL is
     // open-drain, so its logical level is high when released and low when
     // driven.  SDA is the IOBUF input sample, including slave ACKs.
+    // Compatibility output: this is the fabric drive intent, not a pad
+    // readback.  The current XPR exposes SCL as output-only; do not interpret
+    // this signal as proof that the external line reached a high level.
     assign i2c_scl_dbg = ~adau_scl_oe_n;
     assign i2c_sda_dbg = adau_sda_i;
 

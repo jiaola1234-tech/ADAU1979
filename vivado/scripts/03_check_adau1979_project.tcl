@@ -41,11 +41,11 @@ set adau_ila [get_bd_cells -quiet ila_i2c_debug]
 if {[llength $adau_ila]} {
     set adau_ila_mode [get_property CONFIG.C_MONITOR_TYPE $adau_ila]
     set adau_ila_probes [get_property CONFIG.C_NUM_OF_PROBES $adau_ila]
-    if {$adau_ila_mode ne "Native" || $adau_ila_probes ne "6"} {
-        puts "ERROR: ila_i2c_debug is not a six-probe Native ILA (mode=$adau_ila_mode, probes=$adau_ila_probes)"
+    if {$adau_ila_mode ne "Native" || $adau_ila_probes ne "8"} {
+        puts "ERROR: ila_i2c_debug is not an eight-probe Native ILA (mode=$adau_ila_mode, probes=$adau_ila_probes)"
         set failed 1
     } else {
-        puts "OK: ila_i2c_debug Native mode with 6 probes"
+        puts "OK: ila_i2c_debug Native mode with 8 probes (I2C + raw SDATAOUT + AXIS valid)"
     }
 } else {
     puts "WARNING: ila_i2c_debug is not present; ILA capture will not be available"

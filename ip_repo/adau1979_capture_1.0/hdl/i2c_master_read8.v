@@ -15,6 +15,11 @@ module i2c_master_read8 #(
     output reg        done,
     output reg        ack_error,
     output reg [7:0]  rd_data,
+    // Read-phase diagnostics. read_data_valid means all 8 data bits were
+    // sampled; a one-byte read ends with a master NACK by design, so there
+    // is no slave ACK after the data byte.
+    output reg        read_addr_ack,
+    output reg        read_data_valid,
     input  wire       sda_i,
     output reg        scl_oe_n,
     output reg        sda_oe_n
@@ -32,15 +37,16 @@ module i2c_master_read8 #(
     localparam [4:0] ST_TX_HIGH       = 5'd5;
     localparam [4:0] ST_TX_ACK_LOW    = 5'd6;
     localparam [4:0] ST_TX_ACK_HIGH   = 5'd7;
-    localparam [4:0] ST_RESTART_A     = 5'd8;
-    localparam [4:0] ST_RESTART_B     = 5'd9;
-    localparam [4:0] ST_RX_LOW        = 5'd10;
-    localparam [4:0] ST_RX_HIGH       = 5'd11;
-    localparam [4:0] ST_RX_NACK_LOW  = 5'd12;
-    localparam [4:0] ST_RX_NACK_HIGH = 5'd13;
-    localparam [4:0] ST_STOP_A        = 5'd14;
-    localparam [4:0] ST_STOP_B        = 5'd15;
-    localparam [4:0] ST_DONE          = 5'd16;
+    localparam [4:0] ST_TX_ACK_END_LOW = 5'd8;
+    localparam [4:0] ST_RESTART_A     = 5'd9;
+    localparam [4:0] ST_RESTART_B     = 5'd10;
+    localparam [4:0] ST_RX_LOW        = 5'd11;
+    localparam [4:0] ST_RX_HIGH       = 5'd12;
+    localparam [4:0] ST_RX_NACK_LOW  = 5'd13;
+    localparam [4:0] ST_RX_NACK_HIGH = 5'd14;
+    localparam [4:0] ST_STOP_A        = 5'd15;
+    localparam [4:0] ST_STOP_B        = 5'd16;
+    localparam [4:0] ST_DONE          = 5'd17;
 
     reg [4:0] state;
     reg [DIV_WIDTH-1:0] div_cnt;
@@ -82,6 +88,8 @@ module i2c_master_read8 #(
             done <= 1'b0;
             ack_error <= 1'b0;
             rd_data <= 8'd0;
+            read_addr_ack <= 1'b0;
+            read_data_valid <= 1'b0;
             scl_oe_n <= 1'b1;
             sda_oe_n <= 1'b1;
             byte_data <= 8'd0;
@@ -99,6 +107,8 @@ module i2c_master_read8 #(
                         busy <= 1'b1;
                         ack_error <= 1'b0;
                         rd_data <= 8'd0;
+                        read_addr_ack <= 1'b0;
+                        read_data_valid <= 1'b0;
                         tx_idx <= 2'd0;
                         bit_idx <= 3'd7;
                         state <= ST_START_A;
@@ -163,18 +173,41 @@ module i2c_master_read8 #(
                     scl_oe_n <= 1'b1;
                     sda_oe_n <= 1'b1;
                     if (tick) begin
+                        // Standard 100 kHz ninth clock: one tick (5 us) high,
+                        // exactly like a data bit, with SDA sampled at the end
+                        // of that single high phase.  The earlier 2-tick "ACK
+                        // timing experiment" (shared with the write engine) has
+                        // been reverted so the bus carries a uniform 100 kHz
+                        // waveform again.
                         if (sda_sync[1]) begin
                             ack_error <= 1'b1;
                             state <= ST_STOP_A;
-                        end else if (tx_idx == 2'd0) begin
-                            tx_idx <= 2'd1;
-                            state <= ST_TX_LOAD;
-                        end else if (tx_idx == 2'd1) begin
-                            state <= ST_RESTART_A;
                         end else begin
-                            bit_idx <= 3'd7;
-                            state <= ST_RX_LOW;
+                            if (tx_idx == 2'd0)
+                                tx_idx <= 2'd1;
+                            else if (tx_idx == 2'd1)
+                                tx_idx <= 2'd2;
+                            else
+                                bit_idx <= 3'd7;
+                            state <= ST_TX_ACK_END_LOW;
                         end
+                    end
+                end
+
+                // Complete the ACK clock's low phase before a repeated START
+                // or the first receive bit.  SDA must not change while SCL is
+                // still high at the end of the ACK cycle.
+                ST_TX_ACK_END_LOW: begin
+                    scl_oe_n <= 1'b0;
+                    sda_oe_n <= 1'b1;
+                    if (tick) begin
+                        if (tx_idx == 2'd1)
+                            state <= ST_RESTART_A;
+                        else if (tx_idx == 2'd2) begin
+                            read_addr_ack <= 1'b1;
+                            state <= ST_RX_LOW;
+                        end else
+                            state <= ST_TX_LOAD;
                     end
                 end
 
@@ -206,8 +239,10 @@ module i2c_master_read8 #(
                     sda_oe_n <= 1'b1;
                     if (tick) begin
                         rd_data[bit_idx] <= sda_sync[1];
-                        if (bit_idx == 3'd0)
+                        if (bit_idx == 3'd0) begin
+                            read_data_valid <= 1'b1;
                             state <= ST_RX_NACK_LOW;
+                        end
                         else begin
                             bit_idx <= bit_idx - 1'b1;
                             state <= ST_RX_LOW;

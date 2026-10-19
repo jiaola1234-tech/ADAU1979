@@ -81,6 +81,15 @@ module adau1979_capture_v1_0_S00_AXI #
     reg [31:0] slv_reg8;
     reg [31:0] slv_reg9;
     reg [31:0] slv_reg10;
+    reg [31:0] slv_reg11;
+    reg [31:0] slv_reg12;
+    reg [5:0] debug_log_wr_ptr;
+    reg [5:0] debug_log_count;
+    reg [5:0] debug_log_index;
+    reg [63:0] debug_log [0:63];
+    reg [63:0] debug_log_selected_reg;
+    reg init_finished_d;
+    wire [63:0] debug_log_selected = debug_log_selected_reg;
     // The internal FIFO holds 2^FIFO_ADDR_WIDTH audio frames.  Keep the
     // power-on packet length within that tested buffer size.
     localparam [31:0] DEFAULT_SAMPLE_LEN = (32'd1 << FIFO_ADDR_WIDTH);
@@ -112,11 +121,51 @@ module adau1979_capture_v1_0_S00_AXI #
     wire i2c_debug_pll_ack_error;
     wire [7:0] i2c_debug_pll_read_data;
     wire [7:0] i2c_debug_pll_poll_count;
+    wire [6:0] i2c_debug_pll_dev_addr;
+    wire i2c_debug_pll_read_addr_ack;
+    wire i2c_debug_pll_read_data_valid;
+    wire i2c_debug_write_done;
+    wire i2c_debug_write_ack_error;
+    wire i2c_debug_scan_done;
+    wire [6:0] i2c_debug_scan_dev_addr;
+    wire [7:0] i2c_debug_scan_read_data;
+    wire i2c_debug_scan_ack_error;
+    wire i2c_debug_scan_read_addr_ack;
+    wire i2c_debug_scan_read_data_valid;
+    wire i2c_debug_verify_done;
+    wire i2c_debug_verify_read_addr_ack;
+    wire i2c_debug_verify_read_data_valid;
+    wire [7:0] i2c_debug_verify_read_data;
+    wire i2c_debug_verify_ack_error;
+    wire i2c_verify_fail;
+    wire [1:0] i2c_verify_fail_code;
+    wire [6:0] i2c_verify_fail_dev_addr;
+    wire [7:0] i2c_verify_fail_reg_addr;
+    wire [7:0] i2c_verify_fail_expected;
+    wire [7:0] i2c_verify_fail_actual;
     wire [4:0] i2c_debug_wr_state;
     wire [2:0] i2c_debug_wr_byte_idx;
     wire [2:0] i2c_debug_wr_bit_idx;
     wire i2c_debug_wr_ack_sample_pulse;
     wire i2c_debug_wr_ack_sample_sda;
+
+    // 64-bit trace entry format:
+    // [63:60] event type (0=WRITE, 1=PLL_READ, 2=INIT_DONE,
+    //                    3=ADDRESS_SCAN, 4=VERIFY_READ)
+    // [59:52] init_step, [51:45] device, [44:37] register
+    // [36:29] write/read data, [28:26] ACK bits, [25] error
+    // For read events ACK bits are {data_valid, read_addr_ack, !ack_error}.
+    // [24] PLL_LOCK, [23:16] PLL poll count, [15:0] reserved
+    wire debug_log_write_event = i2c_debug_write_done;
+    wire debug_log_pll_event = i2c_debug_pll_done;
+    wire debug_log_done_event = !init_busy && (init_done || init_error) && !init_finished_d;
+    wire debug_log_scan_event = i2c_debug_scan_done;
+    wire debug_log_verify_event = i2c_debug_verify_done;
+
+    // BCLK/LRCLK are external inputs from U2.  The FPGA must not instantiate
+    // or connect a second clock generator here: that would contend with U2 on
+    // the shared audio-clock traces.  The I2S receiver synchronizes these
+    // inputs into S_AXI_ACLK below.
 
     // ILA probe bus.  This is intentionally not an AXI register: it exposes
     // the live I2C pin/control state and the last completed write transaction.
@@ -205,6 +254,8 @@ module adau1979_capture_v1_0_S00_AXI #
             slv_reg0 <= 32'd0;
             slv_reg1 <= DEFAULT_SAMPLE_LEN;
             init_start_req <= 1'b0;
+            debug_log_index <= 6'd0;
+            debug_log_selected_reg <= 64'd0;
         end else begin
             init_start_req <= 1'b0;
             slv_reg0[1] <= 1'b0;
@@ -224,6 +275,14 @@ module adau1979_capture_v1_0_S00_AXI #
                         for (byte_index = 0; byte_index <= 3; byte_index = byte_index + 1)
                             if (S_AXI_WSTRB[byte_index])
                                 slv_reg1[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
+                    end
+                    4'hD: begin
+                        // DEBUG_INDEX is the selected trace entry.  The
+                        // entry is read back through 0x38/0x3C.
+                        if (S_AXI_WSTRB[0]) begin
+                            debug_log_index <= S_AXI_WDATA[5:0];
+                            debug_log_selected_reg <= debug_log[S_AXI_WDATA[5:0]];
+                        end
                     end
                     default: begin
                     end
@@ -261,6 +320,8 @@ module adau1979_capture_v1_0_S00_AXI #
             slv_reg8 <= 32'd0;
             slv_reg9 <= 32'd0;
             slv_reg10 <= 32'd0;
+            slv_reg11 <= 32'd0;
+            slv_reg12 <= 32'd0;
         end else begin
             slv_reg2 <= {
                 16'd0,
@@ -280,6 +341,85 @@ module adau1979_capture_v1_0_S00_AXI #
             slv_reg8 <= {25'd0, i2c_last_dev_addr};
             slv_reg9 <= {16'd0, i2c_last_reg_addr, i2c_last_wr_data};
             slv_reg10 <= {29'd0, i2c_last_ack_bits};
+            slv_reg11 <= {14'd0, i2c_verify_fail_code, i2c_verify_fail,
+                          i2c_verify_fail_dev_addr, i2c_verify_fail_reg_addr};
+            // 0x30 combines debug status with the read-back bytes so the
+            // original 6-bit AXI address map remains unchanged:
+            // count[31:26], ACK error count[23:20], flags[19:16],
+            // actual[15:8], expected[7:0].
+            slv_reg12 <= {debug_log_count, 2'd0, i2c_ack_error_count[3:0],
+                          init_error, init_done, init_busy, i2c_verify_fail,
+                          i2c_verify_fail_actual, i2c_verify_fail_expected};
+        end
+    end
+
+    // Trace RAM writer.  This is entirely in the AXI clock domain, the same
+    // domain as the I2C sequencer, so no CDC logic is needed.
+    integer log_clear_idx;
+    always @(posedge S_AXI_ACLK) begin
+        if (!S_AXI_ARESETN) begin
+            debug_log_wr_ptr <= 6'd0;
+            debug_log_count <= 6'd0;
+            init_finished_d <= 1'b0;
+            for (log_clear_idx = 0; log_clear_idx < 64; log_clear_idx = log_clear_idx + 1)
+                debug_log[log_clear_idx] <= 64'd0;
+        end else begin
+            init_finished_d <= init_done || init_error;
+
+            if (init_start_pulse) begin
+                debug_log_wr_ptr <= 6'd0;
+                debug_log_count <= 6'd0;
+                init_finished_d <= 1'b0;
+            end else begin
+                if (debug_log_write_event) begin
+                    debug_log[debug_log_wr_ptr] <= {
+                        4'h0, init_step, i2c_last_dev_addr, i2c_last_reg_addr,
+                        i2c_last_wr_data, i2c_last_ack_bits, i2c_debug_write_ack_error,
+                        1'b0, 8'd0, 16'd0};
+                    debug_log_wr_ptr <= debug_log_wr_ptr + 1'b1;
+                    if (debug_log_count != 6'd63)
+                        debug_log_count <= debug_log_count + 1'b1;
+                end else if (debug_log_pll_event) begin
+                    debug_log[debug_log_wr_ptr] <= {
+                        4'h1, init_step, i2c_debug_pll_dev_addr, 8'h01,
+                        i2c_debug_pll_read_data,
+                        {i2c_debug_pll_read_data_valid, i2c_debug_pll_read_addr_ack,
+                         !i2c_debug_pll_ack_error},
+                        i2c_debug_pll_ack_error, i2c_debug_pll_read_data[7],
+                        i2c_debug_pll_poll_count, 16'd0};
+                    debug_log_wr_ptr <= debug_log_wr_ptr + 1'b1;
+                    if (debug_log_count != 6'd63)
+                        debug_log_count <= debug_log_count + 1'b1;
+                end else if (debug_log_scan_event) begin
+                    debug_log[debug_log_wr_ptr] <= {
+                        4'h3, init_step, i2c_debug_scan_dev_addr, 8'h00,
+                        i2c_debug_scan_read_data,
+                        {i2c_debug_scan_read_data_valid, i2c_debug_scan_read_addr_ack,
+                         !i2c_debug_scan_ack_error},
+                        i2c_debug_scan_ack_error, i2c_debug_scan_read_data[7],
+                        8'd0, 16'd0};
+                    debug_log_wr_ptr <= debug_log_wr_ptr + 1'b1;
+                    if (debug_log_count != 6'd63)
+                        debug_log_count <= debug_log_count + 1'b1;
+                end else if (debug_log_verify_event) begin
+                    debug_log[debug_log_wr_ptr] <= {
+                        4'h4, init_step, i2c_last_dev_addr, i2c_last_reg_addr,
+                        i2c_debug_verify_read_data,
+                        {i2c_debug_verify_read_data_valid, i2c_debug_verify_read_addr_ack,
+                         !i2c_debug_verify_ack_error},
+                        i2c_debug_verify_ack_error, i2c_debug_verify_read_data[7], 8'd0, 16'd0};
+                    debug_log_wr_ptr <= debug_log_wr_ptr + 1'b1;
+                    if (debug_log_count != 6'd63)
+                        debug_log_count <= debug_log_count + 1'b1;
+                end else if (debug_log_done_event) begin
+                    debug_log[debug_log_wr_ptr] <= {
+                        4'h2, init_step, 7'd0, 8'd0, i2c_ack_error_count[7:0], 3'b000,
+                        init_error, init_done, 8'd0, 16'd0};
+                    debug_log_wr_ptr <= debug_log_wr_ptr + 1'b1;
+                    if (debug_log_count != 6'd63)
+                        debug_log_count <= debug_log_count + 1'b1;
+                end
+            end
         end
     end
 
@@ -334,6 +474,11 @@ module adau1979_capture_v1_0_S00_AXI #
             4'h8: reg_data_out = slv_reg8;
             4'h9: reg_data_out = slv_reg9;
             4'hA: reg_data_out = slv_reg10;
+            4'hB: reg_data_out = slv_reg11;
+            4'hC: reg_data_out = slv_reg12;
+            4'hD: reg_data_out = {26'd0, debug_log_index};
+            4'hE: reg_data_out = debug_log_selected[31:0];
+            4'hF: reg_data_out = debug_log_selected[63:32];
             default: reg_data_out = 32'd0;
         endcase
     end
@@ -370,6 +515,28 @@ module adau1979_capture_v1_0_S00_AXI #
         .debug_pll_ack_error(i2c_debug_pll_ack_error),
         .debug_pll_read_data(i2c_debug_pll_read_data),
         .debug_pll_poll_count(i2c_debug_pll_poll_count),
+        .debug_pll_dev_addr(i2c_debug_pll_dev_addr),
+        .debug_pll_read_addr_ack(i2c_debug_pll_read_addr_ack),
+        .debug_pll_read_data_valid(i2c_debug_pll_read_data_valid),
+        .debug_write_done(i2c_debug_write_done),
+        .debug_write_ack_error(i2c_debug_write_ack_error),
+        .debug_scan_done(i2c_debug_scan_done),
+        .debug_scan_dev_addr(i2c_debug_scan_dev_addr),
+        .debug_scan_read_data(i2c_debug_scan_read_data),
+        .debug_scan_ack_error(i2c_debug_scan_ack_error),
+        .debug_scan_read_addr_ack(i2c_debug_scan_read_addr_ack),
+        .debug_scan_read_data_valid(i2c_debug_scan_read_data_valid),
+        .debug_verify_done(i2c_debug_verify_done),
+        .debug_verify_read_addr_ack(i2c_debug_verify_read_addr_ack),
+        .debug_verify_read_data_valid(i2c_debug_verify_read_data_valid),
+        .debug_verify_read_data(i2c_debug_verify_read_data),
+        .debug_verify_ack_error(i2c_debug_verify_ack_error),
+        .verify_fail(i2c_verify_fail),
+        .verify_fail_code(i2c_verify_fail_code),
+        .verify_fail_dev_addr(i2c_verify_fail_dev_addr),
+        .verify_fail_reg_addr(i2c_verify_fail_reg_addr),
+        .verify_fail_expected(i2c_verify_fail_expected),
+        .verify_fail_actual(i2c_verify_fail_actual),
         .debug_wr_state(i2c_debug_wr_state),
         .debug_wr_byte_idx(i2c_debug_wr_byte_idx),
         .debug_wr_bit_idx(i2c_debug_wr_bit_idx),

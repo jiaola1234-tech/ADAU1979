@@ -7,7 +7,18 @@ if {![llength [current_project -quiet]]} {
     open_project $adau_xpr
 }
 
+# Make the local packaged IP (including adau_audio_clock_gen.v) visible before
+# refreshing the BD instance.  This avoids silently reusing the old 1.0 IP
+# cache whose BCLK/LRCLK ports were inputs.
+set_property ip_repo_paths [file join $adau_root_dir ip_repo] [current_project]
+update_ip_catalog
+
 source [file join $adau_root_dir vivado scripts 02_replace_ad7606_with_adau1979_bd.tcl]
+
+set adau_cells [get_bd_cells -quiet adau1979_capture_0]
+if {[llength $adau_cells]} {
+    upgrade_ip $adau_cells
+}
 
 set adau_bd [lindex [get_files -quiet */design_1.bd] 0]
 reset_target all $adau_bd

@@ -62,8 +62,8 @@
     },
     "boundary": {
       "ports": {
-        "adau_bclk": [ { "direction": "in" } ],
-        "adau_lrclk": [ { "direction": "in" } ],
+        "adau_bclk": [ { "direction": "out" } ],
+        "adau_lrclk": [ { "direction": "out" } ],
         "adau_sdata": [ { "direction": "in", "size_left": "3", "size_right": "0" } ],
         "adau_pd_rst": [ { "direction": "out" } ],
         "adau_scl": [ { "direction": "out" } ],

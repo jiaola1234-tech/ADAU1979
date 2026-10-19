@@ -47,6 +47,23 @@
 !/vitis_workspace/*/.cproject
 !/vitis_workspace/*/.gitignore
 
+# Current ad_slave Vivado/Vitis working copy: keep source projects only.
+/ad_slave/.metadata/
+/ad_slave/.analytics
+/ad_slave/IDE.log
+/ad_slave/*/.metadata/
+/ad_slave/*/.settings/
+/ad_slave/*/Debug/
+/ad_slave/*/_ide/
+/ad_slave/*/*_system/
+/ad_slave/*/RemoteSystemsTempFiles/
+/ad_slave/**/Debug/
+/ad_slave/**/_ide/
+/vivado/ad_slave/backup_*/
+/vivado/ad_slave/*_test/
+/vivado/ad_slave/ack_baseline_*/
+/vivado/ad_slave/__synthesis_is_running__
+
 # Credentials and editor-local files
 .env
 .env.*

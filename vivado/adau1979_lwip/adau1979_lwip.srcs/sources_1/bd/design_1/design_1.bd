@@ -1,7 +1,7 @@
 {
   "design": {
     "design_info": {
-      "boundary_crc": "0x6E5A986ED490D20D",
+      "boundary_crc": "0x221C7062B6D64E3E",
       "device": "xc7z020clg400-2",
       "gen_directory": "../../../../adau1979_lwip.gen/sources_1/bd/design_1",
       "name": "design_1",
@@ -209,10 +209,10 @@
     },
     "ports": {
       "adau_bclk": {
-        "direction": "I"
+        "direction": "O"
       },
       "adau_lrclk": {
-        "direction": "I"
+        "direction": "O"
       },
       "adau_sdata": {
         "direction": "I",
@@ -229,7 +229,7 @@
         }
       },
       "adau_scl": {
-        "direction": "O"
+        "direction": "IO"
       },
       "adau_sda": {
         "direction": "IO"
@@ -3061,21 +3061,15 @@
       },
       "ila_i2c_debug": {
         "vlnv": "xilinx.com:ip:ila:6.2",
-        "xci_name": "design_1_ila_i2c_debug_5",
-        "xci_path": "ip\\design_1_ila_i2c_debug_5\\design_1_ila_i2c_debug_5.xci",
+        "xci_name": "design_1_ila_i2c_debug_1",
+        "xci_path": "ip\\design_1_ila_i2c_debug_1\\design_1_ila_i2c_debug_1.xci",
         "inst_hier_path": "ila_i2c_debug",
         "parameters": {
-          "C_ADV_TRIGGER": {
-            "value": "true"
-          },
           "C_DATA_DEPTH": {
-            "value": "16384"
+            "value": "4096"
           },
           "C_ENABLE_ILA_AXI_MON": {
             "value": "false"
-          },
-          "C_EN_STRG_QUAL": {
-            "value": "0"
           },
           "C_MONITOR_TYPE": {
             "value": "Native"
@@ -3104,9 +3098,9 @@
         }
       },
       "adau1979_capture_0": {
-        "vlnv": "user.org:user:adau1979_capture:1.1",
-        "xci_name": "design_1_adau1979_capture_0_8",
-        "xci_path": "ip\\design_1_adau1979_capture_0_8\\design_1_adau1979_capture_0_8.xci",
+        "vlnv": "user.org:user:adau1979_capture_slave:1.0.3",
+        "xci_name": "design_1_adau1979_capture_0_10",
+        "xci_path": "ip\\design_1_adau1979_capture_0_10_1\\design_1_adau1979_capture_0_10.xci",
         "inst_hier_path": "adau1979_capture_0",
         "parameters": {
           "CLK_HZ": {
@@ -3211,6 +3205,20 @@
           "adau1979_capture_0/adau_sda"
         ]
       },
+      "adau1979_capture_0_adau_bclk": {
+        "ports": [
+          "adau1979_capture_0/adau_bclk",
+          "adau_bclk",
+          "ila_i2c_debug/probe4"
+        ]
+      },
+      "adau1979_capture_0_adau_lrclk": {
+        "ports": [
+          "adau1979_capture_0/adau_lrclk",
+          "adau_lrclk",
+          "ila_i2c_debug/probe5"
+        ]
+      },
       "adau1979_capture_0_adau_pd_rst": {
         "ports": [
           "adau1979_capture_0/adau_pd_rst",
@@ -3220,8 +3228,8 @@
       },
       "adau1979_capture_0_adau_scl": {
         "ports": [
-          "adau1979_capture_0/adau_scl",
-          "adau_scl"
+          "adau_scl",
+          "adau1979_capture_0/adau_scl"
         ]
       },
       "adau1979_capture_0_i2c_debug": {
@@ -3240,20 +3248,6 @@
         "ports": [
           "adau1979_capture_0/i2c_sda_dbg",
           "ila_i2c_debug/probe1"
-        ]
-      },
-      "adau_bclk_1": {
-        "ports": [
-          "adau_bclk",
-          "ila_i2c_debug/probe4",
-          "adau1979_capture_0/adau_bclk"
-        ]
-      },
-      "adau_lrclk_1": {
-        "ports": [
-          "adau_lrclk",
-          "ila_i2c_debug/probe5",
-          "adau1979_capture_0/adau_lrclk"
         ]
       },
       "adau_sdata_1": {

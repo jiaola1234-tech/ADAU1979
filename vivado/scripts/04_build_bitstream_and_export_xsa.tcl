@@ -13,6 +13,11 @@ if {![llength [current_project -quiet]]} {
     }
 }
 
+# Ensure the build sees the current packaged IP revision and the added
+# adau_audio_clock_gen source instead of an old catalog cache.
+set_property ip_repo_paths [file join $adau_root_dir ip_repo] [current_project]
+update_ip_catalog
+
 set adau_bd_files [get_files -quiet */design_1.bd]
 if {![llength $adau_bd_files]} {
     set adau_bd_files [get_files -quiet design_1.bd]
