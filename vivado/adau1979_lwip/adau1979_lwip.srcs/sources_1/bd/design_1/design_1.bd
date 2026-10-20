@@ -1,13 +1,14 @@
 {
   "design": {
     "design_info": {
-      "boundary_crc": "0x1261D0A6692C0385",
+      "boundary_crc": "0x6E5A986ED490D20D",
       "device": "xc7z020clg400-2",
       "gen_directory": "../../../../adau1979_lwip.gen/sources_1/bd/design_1",
       "name": "design_1",
       "rev_ctrl_bd_flag": "RevCtrlBdOff",
       "synth_flow_mode": "Hierarchical",
-      "tool_version": "2022.2"
+      "tool_version": "2022.2",
+      "validated": "true"
     },
     "design_tree": {
       "processing_system7_0": "",
@@ -33,8 +34,8 @@
         "m01_couplers": {}
       },
       "xlconcat_0": "",
-      "ila_i2c_debug": "",
-      "adau1979_capture_0": ""
+      "adau1979_capture_0": "",
+      "ila_i2c_debug": ""
     },
     "interface_ports": {
       "DDR": {
@@ -219,7 +220,13 @@
         "right": "0"
       },
       "adau_pd_rst": {
-        "direction": "O"
+        "direction": "O",
+        "parameters": {
+          "POLARITY": {
+            "value": "ACTIVE_LOW",
+            "value_src": "default_prop"
+          }
+        }
       },
       "adau_scl": {
         "direction": "O"
@@ -3052,44 +3059,6 @@
           }
         }
       },
-      "ila_i2c_debug": {
-        "vlnv": "xilinx.com:ip:ila:6.2",
-        "xci_name": "design_1_ila_i2c_debug_1",
-        "xci_path": "ip\\design_1_ila_i2c_debug_1\\design_1_ila_i2c_debug_1.xci",
-        "inst_hier_path": "ila_i2c_debug",
-        "parameters": {
-          "C_DATA_DEPTH": {
-            "value": "4096"
-          },
-          "C_ENABLE_ILA_AXI_MON": {
-            "value": "false"
-          },
-          "C_MONITOR_TYPE": {
-            "value": "Native"
-          },
-          "C_NUM_OF_PROBES": {
-            "value": "6"
-          },
-          "C_PROBE0_WIDTH": {
-            "value": "1"
-          },
-          "C_PROBE1_WIDTH": {
-            "value": "1"
-          },
-          "C_PROBE2_WIDTH": {
-            "value": "1"
-          },
-          "C_PROBE3_WIDTH": {
-            "value": "64"
-          },
-          "C_PROBE4_WIDTH": {
-            "value": "1"
-          },
-          "C_PROBE5_WIDTH": {
-            "value": "1"
-          }
-        }
-      },
       "adau1979_capture_0": {
         "vlnv": "user.org:user:adau1979_capture:1.1",
         "xci_name": "design_1_adau1979_capture_0_8",
@@ -3123,6 +3092,50 @@
             "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
             "mode": "Slave",
             "memory_map_ref": "s00_axi"
+          }
+        }
+      },
+      "ila_i2c_debug": {
+        "vlnv": "xilinx.com:ip:ila:6.2",
+        "xci_name": "design_1_ila_i2c_debug_1",
+        "xci_path": "ip\\design_1_ila_i2c_debug_1\\design_1_ila_i2c_debug_1.xci",
+        "inst_hier_path": "ila_i2c_debug",
+        "parameters": {
+          "C_CLK_FREQ": {
+            "value": "50"
+          },
+          "C_CLK_PERIOD": {
+            "value": "20"
+          },
+          "C_DATA_DEPTH": {
+            "value": "4096"
+          },
+          "C_ENABLE_ILA_AXI_MON": {
+            "value": "false"
+          },
+          "C_MONITOR_TYPE": {
+            "value": "Native"
+          },
+          "C_NUM_OF_PROBES": {
+            "value": "6"
+          },
+          "C_PROBE0_WIDTH": {
+            "value": "1"
+          },
+          "C_PROBE1_WIDTH": {
+            "value": "1"
+          },
+          "C_PROBE2_WIDTH": {
+            "value": "1"
+          },
+          "C_PROBE3_WIDTH": {
+            "value": "64"
+          },
+          "C_PROBE4_WIDTH": {
+            "value": "1"
+          },
+          "C_PROBE5_WIDTH": {
+            "value": "1"
           }
         }
       }
@@ -3200,16 +3213,14 @@
       },
       "adau1979_capture_0_adau_bclk": {
         "ports": [
-          "adau1979_capture_0/adau_bclk",
           "adau_bclk",
-          "ila_i2c_debug/probe4"
+          "adau1979_capture_0/adau_bclk"
         ]
       },
       "adau1979_capture_0_adau_lrclk": {
         "ports": [
-          "adau1979_capture_0/adau_lrclk",
           "adau_lrclk",
-          "ila_i2c_debug/probe5"
+          "adau1979_capture_0/adau_lrclk"
         ]
       },
       "adau1979_capture_0_adau_pd_rst": {

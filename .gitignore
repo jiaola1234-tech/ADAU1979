@@ -5,6 +5,7 @@
 /tmp/
 /tmp_pdf/
 /NA/
+/_xsa_inspect/
 /sim_check_20260903/
 *.log
 *.jou
@@ -46,6 +47,43 @@
 !/vitis_workspace/*/.project
 !/vitis_workspace/*/.cproject
 !/vitis_workspace/*/.gitignore
+
+# Current Vitis workspace: keep only rebuildable platform/application sources.
+/ws/*
+!/ws/ad_single_1/
+!/ws/ad_single_1_/
+!/ws/ad_single_1__system/
+/ws/.metadata/
+/ws/RemoteSystemsTempFiles/
+/ws/.analytics
+/ws/IDE.log
+/ws/ad_single_1/*
+!/ws/ad_single_1/.gitignore
+!/ws/ad_single_1/.project
+!/ws/ad_single_1/.cproject
+!/ws/ad_single_1/platform.spr
+!/ws/ad_single_1/platform.tcl
+/ws/ad_single_1/bsp/
+/ws/ad_single_1/zynq_fsbl/
+/ws/ad_single_1/export/
+/ws/ad_single_1/_ide/
+/ws/ad_single_1/resources/
+/ws/ad_single_1/.log/
+/ws/ad_single_1_/*
+!/ws/ad_single_1_/.gitignore
+!/ws/ad_single_1_/.project
+!/ws/ad_single_1_/.cproject
+!/ws/ad_single_1_/ad_single_1_.prj
+!/ws/ad_single_1_/src/
+/ws/ad_single_1_/Debug/
+/ws/ad_single_1_/_ide/
+/ws/ad_single_1__system/*
+!/ws/ad_single_1__system/.gitignore
+!/ws/ad_single_1__system/.project
+!/ws/ad_single_1__system/.cproject
+!/ws/ad_single_1__system/ad_single_1__system.sprj
+/ws/ad_single_1__system/Debug/
+/ws/ad_single_1__system/_ide/
 
 # Current ad_slave Vivado/Vitis working copy: keep source projects only.
 /ad_slave/.metadata/
