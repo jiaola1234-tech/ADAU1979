@@ -13,8 +13,10 @@
 | 两份寄存器头 | 字节一致 |
 | 构建副本核对 | 以下 8 个实际编译 RTL 副本均与提交主源字节一致，无参考仓库本地路径依赖 |
 | Python 工具语法 | `py_compile` PASS |
-| FPGA 上板 | 未执行：检测到 Digilent 适配器，但打开目标报 `Labtools 27-2269 No devices detected` |
-| 60 秒双芯片实采/逐路信号注入 | 未执行，等待真实 FPGA、两颗芯片及接线条件 |
+| FPGA 上板下载 | PASS：用户检查电源/JTAG 后检测到 arm_dap_0、xc7z020_1；位流、匹配 PS 初始化及 ELF 下载运行成功 |
+| 真实双芯片初始化 | FAIL：COM5/921600，0x31 从机通过；0x11 主机首笔 0x00 写入 NACK。用户检查后重试及整套重新下载均相同 |
+| 初始化失败采集门控 | PASS：init_done=0、init_error=1、START=0、累计 AXIS 帧=0，DMA 未启动 |
+| 60 秒双芯片实采/逐路信号注入 | 尚未完成，当前被 0x11 无 ACK 阻断，不能宣称双芯片上板通过 |
 
 - `adau1979_capture_core.v`: exactly one compiled copy, byte-identical to the delivered source.
 - `adau1979_capture_v1_0.v`: exactly one compiled copy, byte-identical to the delivered source.
@@ -44,4 +46,26 @@ AXI 仿真覆盖新寄存器银行、写高地址不能改旧控制寄存器、N
 
 本地生成文件（bit/xsa/elf/dcp、工具日志、BSP 和 IP 缓存）按目标仓库既有约定忽略，不提交。
 可用 `scripts/build_dual.tcl`、`scripts/build_dual_vitis.tcl` 重建；
-`tests/board_acceptance.py` 是待接板执行的 60 秒 UART 检查工具，本次没有将它的结果写为 PASS。
+`tests/board_acceptance.py` 已实际连接 COM5 执行；初始化失败返回非零，未将未执行的 60 秒计数检查写为 PASS。
+
+## 实际板卡诊断
+
+2026-10-21 18:08（Asia/Shanghai），用户确认两颗共用时钟/复位、
+0x11→SDATA[2]/[3]、0x31→SDATA[0]/[1]；该接线描述不等于逐路信号注入验证。
+完整串口文本见 `board-init.txt`。此前 115200 无响应，核对 BD 后确认 UART1 为 921600；
+验收脚本和说明已修正，未改动硬件时钟或串口配置。
+
+| 逻辑设备 | 地址 | 配置角色 | status | 写 ACK | PLL | verified | valid | error | 00/01/04/05/06 实际读回 |
+|---|---|---|---|---|---|---|---|---|---|
+| A | 0x11 | master | 00238000 | 0 | 未执行 | 0 | 00 | 00 | 均未执行，银行中的 00 是复位值，不能视为读取成功 |
+| B | 0x31 | slave | 0062F07E | 1 | 1 | 1 | 1F | 00 | 01 / C3 / BF / 02 / 00 |
+
+JTAG 核对 ABI=AD790208、mapping=00002701，failure=00019100：
+有效位=1、code=1（总线失败）、addr7=11、reg=00。写引擎 ACK bits=000。
+失败汇总的 actual=FF 是写失败哨兵值，expected=00 是本次尝试写入的数据；
+两者都不是 A 的寄存器读回。A 在首笔写入即失败，尚未执行主机设置 0x06=01。
+0x31 已完整通过且未再次公共复位；尚不能仅凭 NACK 确定 0x11 的物理故障原因。
+
+仍需：排查 0x11 芯片实际供电、PD/RST、SCL/SDA 连通及地址绑带，
+两颗通过后重跑 `python tests/board_acceptance.py --port COM5 --seconds 60`，
+核对 DMA/FIFO/同步错误/DMASR，并逐路注入确认八个物理通道。

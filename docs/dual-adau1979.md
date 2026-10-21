@@ -155,7 +155,9 @@ xsct.bat scripts/build_dual_vitis.tcl
 3. XSCT 从这份 XSA 创建/更新独立 `dual_platform`，复制本仓库连续采集源码并编译 ELF。
    输出为 `build/vitis/dual_capture/Debug/dual_capture.elf`。
 4. 连接正确的 AX7020，下载 `build/vivado/dual_adau1979.runs/impl_1/design_1_wrapper.bit`，
-   用该 XSA 对应的 PS 初始化和 ELF 调试运行。UART 115200 8N1。
+   用该 XSA 对应的 PS 初始化和 ELF 调试运行。UART **921600 8N1**（沿用 BD 的 UART1 设置）。
+   单块板连接本机 hw_server:3121 时，可执行 `xsct.bat scripts/program_dual.tcl`，
+   自动复位 PS、下载位流、执行匹配的 ps7_init、下载并启动 ELF；该操作仅加载易失配置。
 5. 保留原 s/r 启动交互，可先在 Hardware Manager arm ILA，再输入 s。
    ILA 不是必须的，s 会请求一次完整公共复位/初始化。
 6. 汇总两颗均 verified=1 后才开始正式 DMA；q 停止。
@@ -188,11 +190,17 @@ xsct.bat scripts/build_dual_vitis.tcl
 2. 连续运行至少 60 秒，DMA 块数持续增长；FIFO 溢出不增长，同步错误不持续增长，
    DMASR 无内部/从机/译码错误。可安装 pyserial 后运行：
    `python tests/board_acceptance.py --port COM5 --seconds 60`。
-   该脚本发送 s、保存 UART 文本，至少观察首个进展之后 60 秒，最后发送 q；
+   该脚本默认 921600 波特，发送 s、保存 UART 文本，至少观察首个进展之后 60 秒，最后发送 q；
+   初始化失败时继续接收两颗完整诊断汇总，再保存并返回失败。
    COM 号必须改为实际板卡。计数异常或超时返回失败，显示跳块不算采集丢帧。
 3. 逐路向 A CH1..4、B CH1..4 输入可区分信号，分别确认 ch1..ch8 打印位置；
    检查其余通道没有串位。100 ms 快照不能代替波形/频率质量分析。
 4. 手动保存实物位号—地址—SDATA—打印通道记录和 UART 日志，才可宣称双芯片上板通过。
+
+2026-10-21 已通过 JTAG 下载到 AX7020 并通过 COM5 实测：0x31 从机的 ACK、PLL、
+五项读回全部通过；0x11 主机在首笔 0x00 写入时 NACK。重新下载后结果相同。
+采集门控正常拒绝启动，尚未完成 60 秒实采与逐路信号注入。
+完整结果见 `tests/results/validation.md`、`tests/results/board-init.txt`。
 
 本仓库既有约定忽略 bit/xsa/elf/dcp 等生成物。本交付提交源码、打包、BD、XDC、
 应用、脚本和验证说明，不把本机缓存、凭据、临时文件或旧构建产物上传。

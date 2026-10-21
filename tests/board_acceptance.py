@@ -13,7 +13,8 @@ import serial
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--port", required=True)
-parser.add_argument("--baud", type=int, default=115200)
+parser.add_argument("--baud", type=int, default=921600,
+                    help="UART baud rate (default matches the delivered BD: 921600)")
 parser.add_argument("--seconds", type=float, default=60)
 parser.add_argument("--output", type=Path, default=Path("build/board-acceptance.txt"))
 args = parser.parse_args()
@@ -24,18 +25,33 @@ progress = []
 log = []
 started = None
 passed = False
+failure = None
+failure_deadline = None
 with serial.Serial(args.port, args.baud, timeout=0.2) as uart:
     # The application retains the existing s/r start prompt. No per-packet reset.
     uart.write(b"s")
     deadline = time.monotonic() + args.seconds + 30
     try:
         while time.monotonic() < deadline:
+            if failure_deadline is not None and time.monotonic() >= failure_deadline:
+                break
             line = uart.readline().decode("ascii", errors="replace").strip()
             if not line:
                 continue
             log.append(line)
-            if "INIT FAIL" in line or "init failed" in line or "DMA stalled" in line or "DMA interrupt error" in line:
-                raise RuntimeError(line)
+            if any(marker in line for marker in (
+                    "INIT FAIL", "init failed", "init timeout", "reinit did not enter busy",
+                    "Hardware ABI mismatch", "DMA stalled", "DMA interrupt error")):
+                if failure is None:
+                    failure = line
+                    failure_deadline = time.monotonic() + 2
+                print(line, flush=True)
+            if failure is not None:
+                # Keep both device summaries and the final failure register,
+                # rather than closing the port at the first error line.
+                if time.monotonic() >= failure_deadline:
+                    break
+                continue
             if not line.startswith("ring-progress "):
                 continue
             values = dict(re.findall(r"(\w+)=(0x[0-9a-fA-F]+|[0-9a-fA-F]+)", line))
@@ -57,9 +73,16 @@ with serial.Serial(args.port, args.baud, timeout=0.2) as uart:
             if now - started >= args.seconds:
                 passed = True
                 break
+        if failure is not None:
+            raise RuntimeError(failure)
         if not passed:
             raise RuntimeError("Insufficient continuous progress samples")
         print(f"PASS UART counters for {args.seconds:g}+ seconds; physical channel mapping still needs signal injection")
     finally:
         uart.write(b"q")
+        drain_until = time.monotonic() + 1
+        while time.monotonic() < drain_until:
+            line = uart.readline().decode("ascii", errors="replace").strip()
+            if line:
+                log.append(line)
         args.output.write_text("\n".join(log) + "\n", encoding="utf-8")
