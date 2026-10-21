@@ -68,7 +68,8 @@ module axi_tb;
   wait(!dut.init_busy); #100;
   if(scenario==1) begin
    if(!dut.init_error) $fatal(1,"NACK must fail");
-   expect_reg(8'hB8,32'h1B100);
+   expect_reg(8'hB8,32'h1B1FF);
+   expect_reg(8'hC0,32'h1100); expect_reg(8'hC4,32'h3103);
    #100000; if(received!=0) $fatal(1,"NACK capture enabled");
   end else begin
    expect_reg(8'h80,32'h0023F07E); expect_reg(8'hA0,32'h0062F07E);
@@ -78,6 +79,10 @@ module axi_tb;
    expect_reg(8'hb0,2); expect_reg(8'hb4,0);
    expect_reg(8'h40,32'h7e); expect_reg(8'h44,1); expect_reg(8'h54,1);
    expect_reg(8'hB8,0);
+   expect_reg(8'hC0,32'h1107); expect_reg(8'hC4,32'h3107);
+   write_reg(8'hC0,0); write_reg(8'hC4,0);
+   expect_reg(8'h00,1); expect_reg(8'h04,1024);
+   expect_reg(8'hC0,32'h1107); expect_reg(8'hC4,32'h3107);
    wait(received>=2048); #100;
    expect_reg(8'h00,1); // Packet notification never disarms continuous capture.
    read_reg(8'hBC); if(value<2048 || packets!=2) $fatal(1,"continuous packet count");

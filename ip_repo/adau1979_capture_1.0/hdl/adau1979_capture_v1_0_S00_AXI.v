@@ -164,6 +164,7 @@ module adau1979_capture_v1_0_S00_AXI #
     wire diag_read_done;
     wire [63:0] device_status;
     wire [79:0] device_readback;
+    wire [31:0] device_probe_status;
     reg [31:0] dma_frame_count;
     always @(posedge m00_axis_aclk) begin
         if (!m00_axis_aresetn) dma_frame_count<=0;
@@ -538,6 +539,8 @@ module adau1979_capture_v1_0_S00_AXI #
             6'h2E: reg_data_out = {14'd0,i2c_verify_fail_code,i2c_verify_fail,
                 i2c_verify_fail_dev_addr,i2c_verify_fail_reg_addr};
             6'h2F: reg_data_out = dma_frame_count;
+            6'h30: reg_data_out = {16'd0,device_probe_status[15:0]}; // A address probe
+            6'h31: reg_data_out = {16'd0,device_probe_status[31:16]}; // B address probe
             default: reg_data_out = 32'd0;
         endcase
     end
@@ -594,6 +597,7 @@ module adau1979_capture_v1_0_S00_AXI #
         .verify_fail_actual(i2c_verify_fail_actual),
         .device_status(device_status),
         .device_readback(device_readback),
+        .device_probe_status(device_probe_status),
         .diag_read_data0(diag_read_data0),
         .diag_read_data1(diag_read_data1),
         .diag_read_data4(diag_read_data4),

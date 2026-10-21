@@ -11,7 +11,7 @@ set core [ipx::current_core]
 set_property name adau1979_capture $core
 set_property version 1.2 $core
 set_property display_name {Dual ADAU1979 8CH Continuous Capture} $core
-set_property description {Dual ADAU1979 verified initialization and continuous 256-bit AXI stream} $core
+set_property description {Dual ADAU1979 address ACK probes, 100 ms master settling, verified initialization and continuous 256-bit AXI stream} $core
 set_property vendor_display_name {User} $core
 set_property company_url {https://example.local} $core
 
@@ -94,6 +94,14 @@ foreach name {DUAL_ENABLE DEVICE_A_ADDR DEVICE_B_ADDR AUDIO_MASTER A_SDATA0 A_SD
     set_property value_dependency "spirit:decode(id('PARAM_VALUE.$name'))" $hp
 }
 ipx::create_xgui_files $core
+# Keep repeated packaging deterministic: Vivado appends an empty GUI line.
+set gui_path [file join $ip_root xgui adau1979_capture_v1_2.tcl]
+set gui_handle [open $gui_path r]
+set gui_text [string trimright [read $gui_handle] "\r\n"]
+close $gui_handle
+set gui_handle [open $gui_path w]
+puts $gui_handle $gui_text
+close $gui_handle
 ipx::update_checksums $core
 ipx::save_core $core
 close_project

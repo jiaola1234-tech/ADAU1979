@@ -37,6 +37,7 @@ module adau1979_i2c_init #(
     output reg [4:0] diag_read_error, output reg diag_read_done,
     output wire [63:0] device_status,
     output wire [79:0] device_readback,
+    output wire [31:0] device_probe_status,
     input wire adau_sda_i, output wire adau_scl_oe_n, output wire adau_sda_oe_n
 );
     reg dev_idx;
@@ -45,6 +46,12 @@ module adau1979_i2c_init #(
     reg [39:0] readback [0:1];
     reg [4:0] read_valid [0:1], read_error [0:1];
     reg [1:0] pll_locked, writes_ok, verified, read_done;
+    reg [1:0] probe_attempted, probe_done, probe_ack;
+    reg probing;
+    // Per-device 16-bit diagnostic: addr[14:8], ACK[2], done[1], attempted[0].
+    assign device_probe_status = {
+        1'b0, DEVICE_B_ADDR[6:0], 5'd0, probe_ack[1], probe_done[1], probe_attempted[1],
+        1'b0, DEVICE_A_ADDR[6:0], 5'd0, probe_ack[0], probe_done[0], probe_attempted[0]};
     wire [31:0] status_a = {8'd0, DEVICE_A_ADDR[6:0], (AUDIO_MASTER==0),
         1'b1, verified[0], writes_ok[0], pll_locked[0], read_error[0],
         read_valid[0], read_done[0], (init_busy && !dev_idx)};
@@ -70,7 +77,8 @@ module adau1979_i2c_init #(
                      ST_LOAD=4'd3, ST_START=4'd4, ST_WAIT=4'd5,
                      ST_DELAY=4'd6, ST_DONE=4'd7, ST_PLL_START=4'd8,
                      ST_PLL_WAIT=4'd9, ST_PLL_DELAY=4'd10, ST_FAIL=4'd11,
-                     ST_DIAG_START=4'd12, ST_DIAG_WAIT=4'd13;
+                     ST_DIAG_START=4'd12, ST_DIAG_WAIT=4'd13,
+                     ST_MASTER_SETTLE=4'd14, ST_PROBE_WAIT=4'd15;
 
     reg [3:0] state;
     reg [31:0] wait_cnt, pll_poll_count;
@@ -128,8 +136,8 @@ module adau1979_i2c_init #(
 
     i2c_master_write8 #(.CLK_HZ(CLK_HZ), .I2C_HZ(I2C_HZ), .CHECK_ACK(1))
     i2c_master_write8_i (
-        .clk(clk), .rstn(rstn), .start(i2c_start), .dev_addr(I2C_ADDR),
-        .reg_addr(reg_addr), .wr_data(reg_data), .busy(i2c_busy), .done(i2c_done),
+        .clk(clk), .rstn(rstn), .start(i2c_start), .address_only(probing), .dev_addr(I2C_ADDR),
+        .reg_addr(probing ? 8'hFF : reg_addr), .wr_data(reg_data), .busy(i2c_busy), .done(i2c_done),
         .ack_error(i2c_ack_error), .last_dev_addr(i2c_last_dev_addr),
         .last_reg_addr(i2c_last_reg_addr), .last_wr_data(i2c_last_wr_data),
         .ack_bits(i2c_last_ack_bits), .debug_state(i2c_debug_wr_state),
@@ -206,6 +214,7 @@ module adau1979_i2c_init #(
             readback[0]<=0; readback[1]<=0;
             read_valid[0]<=0; read_valid[1]<=0; read_error[0]<=0; read_error[1]<=0;
             pll_locked<=0; writes_ok<=0; verified<=0; read_done<=0; diag_idx<=0;
+            probe_attempted<=0; probe_done<=0; probe_ack<=0; probing<=1;
         end else begin
             i2c_start<=0; pll_read_start<=0; debug_write_done<=0;
             case (state)
@@ -217,7 +226,7 @@ module adau1979_i2c_init #(
                 ST_RESET_HIGH: begin
                     adau_pd_rst<=1; wait_cnt<=wait_cnt+1'b1;
                     if (wait_cnt>=POWERUP_WAIT_COUNT) begin
-                        wait_cnt<=0; script_idx<=0; init_step<=0; init_error<=0; state<=ST_LOAD;
+                        wait_cnt<=0; script_idx<=0; init_step<=0; init_error<=0; state<=ST_START;
                     end
                 end
                 ST_IDLE: begin
@@ -229,6 +238,7 @@ module adau1979_i2c_init #(
                         readback[0]<=0; readback[1]<=0;
                         read_valid[0]<=0; read_valid[1]<=0; read_error[0]<=0; read_error[1]<=0;
                         pll_locked<=0; writes_ok<=0; verified<=0; read_done<=0;
+                        probe_attempted<=0; probe_done<=0; probe_ack<=0; probing<=1;
                         diag_idx<=0; state<=ST_RESET_LOW;
                     end
                 end
@@ -237,7 +247,26 @@ module adau1979_i2c_init #(
                     if (script_idx>=8'd15) begin writes_ok[dev_idx]<=1; wait_cnt<=0; state<=ST_DELAY; end
                     else state<=ST_START;
                 end
-                ST_START: if (!i2c_busy) begin i2c_start<=1; state<=ST_WAIT; end
+                ST_START: if (!i2c_busy) begin
+                    i2c_start<=1;
+                    if (probing) begin probe_attempted[dev_idx]<=1; state<=ST_PROBE_WAIT; end
+                    else state<=ST_WAIT;
+                end
+                ST_PROBE_WAIT: if (i2c_done) begin
+                    probe_done[dev_idx]<=1;
+                    probe_ack[dev_idx]<=!i2c_ack_error && i2c_last_ack_bits[0];
+                    probing<=0;
+                    if (i2c_ack_error || !i2c_last_ack_bits[0]) begin
+                        ack_error_count<=ack_error_count+1'b1;
+                        // FF denotes the address-only phase, not a register access.
+                        record_failure(1,8'hFF,8'h01,8'h00);
+                    end else state<=ST_LOAD;
+                end
+                ST_MASTER_SETTLE: begin
+                    // Keep shared PD/RST high and both engines idle for 100 ms.
+                    if (wait_cnt>=POWERUP_WAIT_COUNT-1) begin wait_cnt<=0; state<=ST_START; end
+                    else wait_cnt<=wait_cnt+1'b1;
+                end
                 ST_WAIT: if (i2c_done) begin
                     debug_write_done<=1;
                     if (i2c_ack_error) begin
@@ -285,7 +314,7 @@ module adau1979_i2c_init #(
                     if (DUAL_ENABLE && !is_master) begin
                         // The slave is fully verified. Switch address, never pulse shared PD/RST.
                         dev_idx<=AUDIO_MASTER; script_idx<=0; diag_idx<=0;
-                        wait_cnt<=0; pll_poll_count<=0; state<=ST_LOAD;
+                        wait_cnt<=0; pll_poll_count<=0; probing<=1; state<=ST_MASTER_SETTLE;
                     end else begin
                         started_once<=1; init_done<=verified[0] && (!DUAL_ENABLE || verified[1]);
                         init_busy<=0; state<=ST_IDLE;

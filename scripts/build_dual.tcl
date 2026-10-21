@@ -4,7 +4,13 @@ source [file join $root ip_repo adau1979_capture_1.0 scripts package_ip.tcl]
 create_project -force dual_adau1979 [file join $root build vivado] -part xc7z020clg400-2
 set_property ip_repo_paths [list [file join $root ip_repo adau1979_capture_1.0]] [current_project]
 update_ip_catalog
-file mkdir [file join $root build bd]
+set bd_dir [file join $root build bd]
+if {[file exists $bd_dir]} {
+    # Recreate generated XCI metadata from the delivered BD. Old XCI files can
+    # retain gen_directory values from the reference project's output tree.
+    file rename $bd_dir [file join $root build bd_previous_[clock seconds]]
+}
+file mkdir $bd_dir
 file copy -force [file join $root vivado dual_adau1979 design_1.bd] [file join $root build bd design_1.bd]
 add_files -norecurse [file join $root build bd design_1.bd]
 open_bd_design [file join $root build bd design_1.bd]

@@ -356,7 +356,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>ab628368</spirit:value>
+            <spirit:value>f36e3ef3</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -372,7 +372,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>ab628368</spirit:value>
+            <spirit:value>f36e3ef3</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -386,7 +386,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>5479ebe3</spirit:value>
+            <spirit:value>be0fff86</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -1139,7 +1139,7 @@
       </spirit:file>
     </spirit:fileSet>
   </spirit:fileSets>
-  <spirit:description>Dual ADAU1979 verified initialization and continuous 256-bit AXI stream</spirit:description>
+  <spirit:description>Dual ADAU1979 address ACK probes, 100 ms master settling, verified initialization and continuous 256-bit AXI stream</spirit:description>
   <spirit:parameters>
     <spirit:parameter>
       <spirit:name>C_S00_AXI_DATA_WIDTH</spirit:name>
@@ -1268,7 +1268,7 @@
       <xilinx:vendorDisplayName>User</xilinx:vendorDisplayName>
       <xilinx:vendorURL>https://example.local</xilinx:vendorURL>
       <xilinx:coreRevision>1</xilinx:coreRevision>
-      <xilinx:coreCreationDateTime>2026-10-21T09:41:11Z</xilinx:coreCreationDateTime>
+      <xilinx:coreCreationDateTime>2026-10-21T10:56:45Z</xilinx:coreCreationDateTime>
       <xilinx:configElementInfos>
         <xilinx:configElementInfo xilinx:referenceId="PARAM_VALUE.AUDIO_MASTER" xilinx:valueSource="user"/>
         <xilinx:configElementInfo xilinx:referenceId="PARAM_VALUE.A_SDATA0" xilinx:valueSource="user"/>
@@ -1284,7 +1284,7 @@
       <xilinx:xilinxVersion>2022.2</xilinx:xilinxVersion>
       <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="160829c4"/>
       <xilinx:checksum xilinx:scope="memoryMaps" xilinx:value="0c04c4c2"/>
-      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="c7071dcb"/>
+      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="84698a29"/>
       <xilinx:checksum xilinx:scope="ports" xilinx:value="82209907"/>
       <xilinx:checksum xilinx:scope="hdlParameters" xilinx:value="e5557ace"/>
       <xilinx:checksum xilinx:scope="parameters" xilinx:value="61d4d947"/>

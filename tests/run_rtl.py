@@ -35,7 +35,7 @@ benches = [ROOT / "tests" / name for name in ("init_tb.sv", "stream_tb.sv", "axi
 call("xvlog", ["--sv", *sources, *benches], "compile")
 summary = []
 for top, scenarios in (
-    ("init_tb", range(4)), ("init_master1_tb", [0]), ("init_single_tb", [0]),
+    ("init_tb", range(7)), ("init_master1_tb", [0]), ("init_single_tb", [0]),
     ("stream_tb", [0]), ("stream_swap_tb", [0]), ("stream_single_tb", [0]),
     ("axi_tb", [0, 1]),
 ):

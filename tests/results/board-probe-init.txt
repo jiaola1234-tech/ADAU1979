@@ -1,0 +1,18 @@
+PS start accepted: ADAU1979 reset/I2C transaction requested; waiting for init-done
+ADAU1979 init failed: status=0x00000F08 last_dev=0x11 last_reg_data=0x0000FF00 ack=0x00
+device A addr7=0x11 role=master enabled=1 PLL=0 write_ACK=0 verified=0 status=00238000
+pre-config probe addr7=0x11 attempted=1 done=1 address_ACK=0 status=00001103
+addr=11 reg=00 actual=00 expected=01 valid=0 error=0
+addr=11 reg=01 actual=00 expected=C3 valid=0 error=0
+addr=11 reg=04 actual=00 expected=BF valid=0 error=0
+addr=11 reg=05 actual=00 expected=02 valid=0 error=0
+addr=11 reg=06 actual=00 expected=01 valid=0 error=0
+device B addr7=0x31 role=slave enabled=1 PLL=1 write_ACK=1 verified=1 status=0062F07E
+pre-config probe addr7=0x31 attempted=1 done=1 address_ACK=1 status=00003107
+addr=31 reg=00 actual=01 expected=01 valid=1 error=0
+addr=31 reg=01 actual=C3 expected=C3 valid=1 error=0
+addr=31 reg=04 actual=BF expected=BF valid=1 error=0
+addr=31 reg=05 actual=02 expected=02 valid=1 error=0
+addr=31 reg=06 actual=00 expected=00 valid=1 error=0
+INIT FAIL code=1 addr7=11 reg=FF actual=00 expected=01
+failure phase=pre-config address probe; no register/data bytes sent

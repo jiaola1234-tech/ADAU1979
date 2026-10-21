@@ -119,11 +119,17 @@ static int print_i2c_readback(void)
         u32 status = adau1979_read(ADAU1979_BASEADDR,base);
         u32 addr = (status>>17)&0x7Fu;
         u32 master = (status>>16)&1u;
+        u32 probe = adau1979_read(ADAU1979_BASEADDR,
+            bank ? ADAU1979_CAPTURE_PROBE_B_OFFSET : ADAU1979_CAPTURE_PROBE_A_OFFSET);
         xil_printf("device %c addr7=0x%02x role=%s enabled=%u PLL=%u write_ACK=%u verified=%u status=%08x\r\n",
             'A'+bank,(unsigned)addr,master ? "master" : "slave",
             (unsigned)((status>>15)&1u),(unsigned)((status>>12)&1u),
             (unsigned)((status>>13)&1u),(unsigned)((status>>14)&1u),(unsigned)status);
         if (!(status & 0x8000u)) continue;
+        xil_printf(" pre-config probe addr7=0x%02x attempted=%u done=%u address_ACK=%u status=%08x\r\n",
+            (unsigned)((probe>>8)&0x7Fu),(unsigned)(probe&1u),
+            (unsigned)((probe>>1)&1u),(unsigned)((probe>>2)&1u),(unsigned)probe);
+        if ((probe & 7u)!=7u || ((probe>>8)&0x7Fu)!=addr) all_ok=0;
         if ((status & ADAU1979_CAPTURE_DEVICE_PASS_MASK) != ADAU1979_CAPTURE_DEVICE_PASS_MASK ||
             (status & ADAU1979_CAPTURE_DEVICE_ERROR_MASK)) all_ok=0;
         for (index=0u; index<5u; ++index) {
@@ -143,6 +149,8 @@ static int print_i2c_readback(void)
             xil_printf("INIT FAIL code=%u addr7=%02x reg=%02x actual=%02x expected=%02x\r\n",
                 (unsigned)((failure>>16)&3u),(unsigned)((failure>>8)&0x7Fu),
                 (unsigned)(failure&0xFFu),(unsigned)((detail>>8)&0xFFu),(unsigned)(detail&0xFFu));
+            if ((failure&0xFFu)==0xFFu)
+                xil_printf(" failure phase=pre-config address probe; no register/data bytes sent\r\n");
             all_ok=0;
         }
     }

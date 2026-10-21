@@ -36,6 +36,11 @@
 #define ADAU1979_CAPTURE_DEVICE_B_OFFSET         0xA0u
 #define ADAU1979_CAPTURE_FAILURE_OFFSET          0xB8u
 #define ADAU1979_CAPTURE_AXIS_FRAMES_OFFSET      0xBCu
+#define ADAU1979_CAPTURE_PROBE_A_OFFSET          0xC0u
+#define ADAU1979_CAPTURE_PROBE_B_OFFSET          0xC4u
+/* Probe status: attempted[0], done[1], address ACK[2], addr7[14:8].
+ * Address-only START/addr-W/ACK/STOP; failure register FF denotes this phase.
+ */
 /* Device status: busy[0], done[1], read-valid[6:2], read-error[11:7],
  * PLL[12], writes-ACKed[13], verified[14], enabled[15], master[16], addr[23:17].
  * Device bank +4,+8,+12,+16,+20: actual 0x00,01,04,05,06 bytes.

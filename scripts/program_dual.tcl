@@ -12,6 +12,7 @@ rst -system
 after 1000
 fpga -file $bit
 targets -set -nocase -filter {name =~ "ARM*#0"}
+catch {stop}
 configparams force-mem-access 1
 source $psinit
 ps7_init

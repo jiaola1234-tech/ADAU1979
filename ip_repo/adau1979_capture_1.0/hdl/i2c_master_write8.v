@@ -15,6 +15,7 @@ module i2c_master_write8 #
     input  wire       rstn,
 
     input  wire       start,
+    input  wire       address_only, // START + addr-W + ACK + STOP; no register/data
     input  wire [6:0] dev_addr,
     input  wire [7:0] reg_addr,
     input  wire [7:0] wr_data,
@@ -75,6 +76,7 @@ module i2c_master_write8 #
     reg [2:0] bit_idx;
     reg [3:0] bc_cnt;
     reg [1:0] attempt_count;
+    reg address_only_latched;
     (* ASYNC_REG = "TRUE" *) reg [1:0] sda_sync;
 
     assign debug_state = state;
@@ -123,6 +125,7 @@ module i2c_master_write8 #
             ack_bits <= 3'd0;
             bc_cnt <= 4'd0;
             attempt_count <= 2'd0;
+            address_only_latched <= 1'b0;
             debug_ack_sample_pulse <= 1'b0;
             debug_ack_sample_sda <= 1'b1;
         end else begin
@@ -135,6 +138,7 @@ module i2c_master_write8 #
                     sda_oe_n <= 1'b1;
                     busy <= 1'b0;
                     if (start) begin
+                        address_only_latched <= address_only;
                         busy <= 1'b1;
                         ack_error <= 1'b0;
                         last_dev_addr <= dev_addr;
@@ -244,7 +248,7 @@ module i2c_master_write8 #
                     scl_oe_n <= 1'b0;
                     sda_oe_n <= 1'b1;
                     if (tick) begin
-                        if (byte_idx == 3'd2)
+                        if (address_only_latched || byte_idx == 3'd2)
                             state <= ST_STOP_A;
                         else begin
                             byte_idx <= byte_idx + 1'b1;
