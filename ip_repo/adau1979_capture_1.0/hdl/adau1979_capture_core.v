@@ -2,6 +2,11 @@
 
 module adau1979_capture_core #
 (
+    parameter integer DUAL_ENABLE = 1,
+    parameter integer A_SDATA0 = 2,
+    parameter integer A_SDATA1 = 3,
+    parameter integer B_SDATA0 = 0,
+    parameter integer B_SDATA1 = 1,
     parameter integer SLOT_BITS = 32,
     parameter integer WORD_BITS = 24,
     parameter integer LR_POLARITY = 1,
@@ -66,6 +71,11 @@ module adau1979_capture_core #
     assign fifo_wr_en = rx_frame_valid & capture_active;
 
     adau1979_i2s_rx #(
+        .DUAL_ENABLE(DUAL_ENABLE),
+        .A_SDATA0(A_SDATA0),
+        .A_SDATA1(A_SDATA1),
+        .B_SDATA0(B_SDATA0),
+        .B_SDATA1(B_SDATA1),
         .SLOT_BITS(SLOT_BITS),
         .WORD_BITS(WORD_BITS),
         .LR_POLARITY(LR_POLARITY),

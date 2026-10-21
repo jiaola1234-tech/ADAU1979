@@ -1,25 +1,17 @@
-create_project -force adau1979_capture_packager {C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_1.0/.packager} -part xc7z020clg400-2
-
-add_files -norecurse {
-    C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_1.0/hdl/adau1979_capture_v1_0.v
-    C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_1.0/hdl/adau1979_capture_v1_0_S00_AXI.v
-    C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_1.0/hdl/adau1979_capture_core.v
-    C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_1.0/hdl/adau1979_i2s_rx.v
-    C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_1.0/hdl/adau1979_i2c_init.v
-    C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_1.0/hdl/i2c_master_write8.v
-    C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_1.0/hdl/i2c_master_read8.v
-    C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_1.0/hdl/axis_fifo_256.v
-}
+set ip_root [file normalize [file join [file dirname [info script]] ..]]
+set root [file normalize [file join $ip_root .. ..]]
+create_project -force adau1979_capture_packager [file join $root build package] -part xc7z020clg400-2
+add_files -norecurse [glob [file join $ip_root hdl *.v]]
 set_property top adau1979_capture_v1_0 [current_fileset]
 update_compile_order -fileset sources_1
 
-ipx::package_project -root_dir {C:/Users/weitong/Desktop/ADAU1979/ip_repo/adau1979_capture_1.0} -vendor user.org -library user -taxonomy /UserIP -import_files -set_current true
+ipx::package_project -root_dir $ip_root -vendor user.org -library user -taxonomy /UserIP -import_files -set_current true
 set core [ipx::current_core]
 
 set_property name adau1979_capture $core
-set_property version 1.1 $core
-set_property display_name {ADAU1979 4CH Capture} $core
-set_property description {Single ADAU1979 4-channel I2S capture at fixed 7-bit I2C address 0x11 with 256-bit AXI-Stream output} $core
+set_property version 1.2 $core
+set_property display_name {Dual ADAU1979 8CH Continuous Capture} $core
+set_property description {Dual ADAU1979 verified initialization and continuous 256-bit AXI stream} $core
 set_property vendor_display_name {User} $core
 set_property company_url {https://example.local} $core
 
@@ -29,7 +21,7 @@ ipx::infer_bus_interfaces xilinx.com:signal:clock_rtl:1.0 $core
 ipx::infer_bus_interfaces xilinx.com:signal:reset_rtl:1.0 $core
 
 set_property value 32 [ipx::get_hdl_parameters C_S00_AXI_DATA_WIDTH -of_objects $core]
-set_property value 6 [ipx::get_hdl_parameters C_S00_AXI_ADDR_WIDTH -of_objects $core]
+set_property value 8 [ipx::get_hdl_parameters C_S00_AXI_ADDR_WIDTH -of_objects $core]
 
 if {[llength [ipx::get_bus_interfaces M00_AXIS -of_objects $core]]} {
     set busif [ipx::get_bus_interfaces M00_AXIS -of_objects $core]
@@ -92,6 +84,16 @@ if {[llength $axis_rst_bus]} {
     }
 }
 
+# Resolve every GUI parameter directly into the matching HDL parameter.
+foreach name {DUAL_ENABLE DEVICE_A_ADDR DEVICE_B_ADDR AUDIO_MASTER A_SDATA0 A_SDATA1 B_SDATA0 B_SDATA1} {
+    set hp [ipx::get_hdl_parameters $name -of_objects $core]
+    set up [ipx::get_user_parameters $name -of_objects $core]
+    set_property value_resolve_type user $up
+    set_property value_source user $up
+    set_property value_resolve_type generated $hp
+    set_property value_dependency "spirit:decode(id('PARAM_VALUE.$name'))" $hp
+}
+ipx::create_xgui_files $core
 ipx::update_checksums $core
 ipx::save_core $core
 close_project

@@ -183,12 +183,6 @@ module i2c_master_read8 #(
                             ack_error <= 1'b1;
                             state <= ST_STOP_A;
                         end else begin
-                            if (tx_idx == 2'd0)
-                                tx_idx <= 2'd1;
-                            else if (tx_idx == 2'd1)
-                                tx_idx <= 2'd2;
-                            else
-                                bit_idx <= 3'd7;
                             state <= ST_TX_ACK_END_LOW;
                         end
                     end
@@ -201,10 +195,16 @@ module i2c_master_read8 #(
                     scl_oe_n <= 1'b0;
                     sda_oe_n <= 1'b1;
                     if (tick) begin
-                        if (tx_idx == 2'd1)
+                        // Dispatch using the byte that just completed, not
+                        // an already incremented index. Send register before restart.
+                        if (tx_idx == 2'd0) begin
+                            tx_idx <= 2'd1;
+                            state <= ST_TX_LOAD;
+                        end else if (tx_idx == 2'd1)
                             state <= ST_RESTART_A;
                         else if (tx_idx == 2'd2) begin
                             read_addr_ack <= 1'b1;
+                            bit_idx <= 3'd7;
                             state <= ST_RX_LOW;
                         end else
                             state <= ST_TX_LOAD;

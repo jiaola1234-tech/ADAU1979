@@ -1,0 +1,12 @@
+PASS init scenario=0 MASTER=0 DUAL=1 ds=0062f07e0023f07e rb=0002bfc3010102bfc301
+PASS init scenario=1 MASTER=0 DUAL=1 ds=0062800000238000 rb=00000000000000000000
+PASS init scenario=2 MASTER=0 DUAL=1 ds=0062a00000238000 rb=00000000000000000000
+PASS init scenario=3 MASTER=0 DUAL=1 ds=0062b21e00238000 rb=0000bec3010000000000
+PASS init scenario=0 MASTER=1 DUAL=1 ds=0063f07e0022f07e rb=0102bfc3010002bfc301
+PASS init scenario=0 MASTER=0 DUAL=0 ds=006200000023f07e rb=00000000000102bfc301
+PASS stream DUAL=1 SWAP=0 3072 distinct frames, 3 TLAST, stable backpressure
+PASS stream DUAL=1 SWAP=1 3072 distinct frames, 3 TLAST, stable backpressure
+PASS stream DUAL=0 SWAP=0 3072 distinct frames, 3 TLAST, stable backpressure
+PASS AXI scenario=0 banks>=0x80 no alias, init gate, continuous START
+PASS AXI scenario=1 banks>=0x80 no alias, init gate, continuous START
+ALL RTL TESTS PASS

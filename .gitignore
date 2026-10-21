@@ -109,3 +109,11 @@
 *.key
 .DS_Store
 Thumbs.db
+
+# Reproducible dual capture outputs
+/build/
+/tests/.run/
+
+/tests/__pycache__/
+/vivado/dual_adau1979/ip/
+/vivado/dual_adau1979/ipshared/

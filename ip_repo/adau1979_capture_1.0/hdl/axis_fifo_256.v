@@ -38,8 +38,11 @@ module axis_fifo_256 #
 
     wire do_write = wr_en && !full;
     wire do_handshake = m_axis_tvalid && m_axis_tready;
-    wire can_advance = !m_axis_tvalid || (m_axis_tready && !m_axis_tlast);
-    wire can_load = can_advance && (count != 0) && packet_enable && !packet_done;
+    // count counts queued RAM words, excluding the registered output.
+    // Never read a just-written empty RAM address (read-during-write is old data).
+    // TLAST only resets the packet index; the stream continues without clearing.
+    wire can_load = packet_enable && (!m_axis_tvalid || m_axis_tready) &&
+                    (count != 0);
     wire do_read = can_load;
     // Zero is not a valid finite DMA packet length.  Fall back to one FIFO
     // depth while still allowing longer packets to stream through the FIFO.
@@ -71,7 +74,9 @@ module axis_fifo_256 #
             packet_done <= 1'b0;
             packet_count <= 32'd0;
         end else begin
-            packet_done <= packet_done;
+            // packet_done is a one-cycle notification for this packet.  It
+            // must not gate the next packet or stop the capture stream.
+            packet_done <= 1'b0;
 
             if (!packet_enable) begin
                 packet_done <= 1'b0;

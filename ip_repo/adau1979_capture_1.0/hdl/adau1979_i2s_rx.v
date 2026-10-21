@@ -2,6 +2,11 @@
 
 module adau1979_i2s_rx #
 (
+    parameter integer DUAL_ENABLE = 1,
+    parameter integer A_SDATA0 = 2,
+    parameter integer A_SDATA1 = 3,
+    parameter integer B_SDATA0 = 0,
+    parameter integer B_SDATA1 = 1,
     parameter integer SLOT_BITS = 32,
     parameter integer WORD_BITS = 24,
     parameter integer LR_POLARITY = 1,
@@ -45,7 +50,11 @@ module adau1979_i2s_rx #
     reg [WORD_BITS-1:0]       sh1;
     reg [WORD_BITS-1:0]       sh2;
     reg [WORD_BITS-1:0]       sh3;
-    // The single ADAU1979 is wired to sdata[2]/sdata[3] (SDATAOUT11/12).
+    // Logical device A retains the proven sdata[2]/[3] wiring.
+    reg [31:0] left_w0, left_w1;
+    reg left_valid;
+    wire [31:0] right_words [0:3];
+    wire [31:0] left_words [0:3];
     reg [31:0]                left_w2;
     reg [31:0]                left_w3;
     reg [BIT_COUNT_WIDTH-1:0] delay_left;
@@ -64,6 +73,11 @@ module adau1979_i2s_rx #
     wire [31:0] next_w1 = {{(32-WORD_BITS){next_sh1[WORD_BITS-1]}}, next_sh1};
     wire [31:0] next_w2 = {{(32-WORD_BITS){next_sh2[WORD_BITS-1]}}, next_sh2};
     wire [31:0] next_w3 = {{(32-WORD_BITS){next_sh3[WORD_BITS-1]}}, next_sh3};
+
+    assign right_words[0]=next_w0; assign right_words[1]=next_w1;
+    assign right_words[2]=next_w2; assign right_words[3]=next_w3;
+    assign left_words[0]=left_w0; assign left_words[1]=left_w1;
+    assign left_words[2]=left_w2; assign left_words[3]=left_w3;
 
     integer i;
 
@@ -99,10 +113,11 @@ module adau1979_i2s_rx #
             frame_data <= 256'd0;
             frame_count <= 32'd0;
             sync_error_count <= 32'd0;
+            left_w0 <= 0; left_w1 <= 0; left_valid <= 0;
             left_w2 <= 32'd0;
             left_w3 <= 32'd0;
         end else if (clear) begin
-            // A new DMA packet must begin on a fresh LRCLK boundary.  Do
+            // Capture start must begin on a fresh LRCLK boundary. Do
             // not allow the odd-channel half of the previous frame to be
             // combined with the next packet's even-channel half.
             bit_idx <= {BIT_COUNT_WIDTH{1'b0}};
@@ -115,6 +130,7 @@ module adau1979_i2s_rx #
             frame_seen <= 1'b0;
             frame_valid <= 1'b0;
             frame_data <= 256'd0;
+            left_w0 <= 0; left_w1 <= 0; left_valid <= 0;
             left_w2 <= 32'd0;
             left_w3 <= 32'd0;
         end else begin
@@ -127,6 +143,7 @@ module adau1979_i2s_rx #
                 delay_left <= I2S_DELAY_COUNT;
                 frame_seen <= 1'b1;
                 slot_idx <= lr_active ? 1'b0 : 1'b1;
+                if (lr_active) left_valid <= 0;
                 sh0 <= {WORD_BITS{1'b0}};
                 sh1 <= {WORD_BITS{1'b0}};
                 sh2 <= {WORD_BITS{1'b0}};
@@ -142,12 +159,19 @@ module adau1979_i2s_rx #
 
                     if (bit_idx == WORD_LAST) begin
                         if (slot_idx == 1'b0) begin
+                            left_w0 <= next_w0; left_w1 <= next_w1;
+                            left_valid <= frame_seen;
                             left_w2 <= next_w2;
                             left_w3 <= next_w3;
-                        end else begin
-                            // Low 128 bits are the four valid samples; the
-                            // upper 128 bits are explicit zero padding.
-                            frame_data <= {128'd0, next_w3, left_w3, next_w2, left_w2};
+                        end else if (left_valid && frame_seen) begin
+                            // Each serial lane carries CH odd/even in the proven slots.
+                            frame_data <= {DUAL_ENABLE ? right_words[B_SDATA1] : 32'd0,
+                                DUAL_ENABLE ? left_words[B_SDATA1] : 32'd0,
+                                DUAL_ENABLE ? right_words[B_SDATA0] : 32'd0,
+                                DUAL_ENABLE ? left_words[B_SDATA0] : 32'd0,
+                                right_words[A_SDATA1], left_words[A_SDATA1],
+                                right_words[A_SDATA0], left_words[A_SDATA0]};
+                            left_valid <= 0;
                             frame_valid <= 1'b1;
                             frame_count <= frame_count + 1'b1;
                         end

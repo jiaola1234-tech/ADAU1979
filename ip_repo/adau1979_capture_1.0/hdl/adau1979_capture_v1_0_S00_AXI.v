@@ -3,7 +3,15 @@
 module adau1979_capture_v1_0_S00_AXI #
 (
     parameter integer C_S_AXI_DATA_WIDTH = 32,
-    parameter integer C_S_AXI_ADDR_WIDTH = 6,
+    parameter integer C_S_AXI_ADDR_WIDTH = 8,
+    parameter integer DUAL_ENABLE = 1,
+    parameter integer DEVICE_A_ADDR = 17,
+    parameter integer DEVICE_B_ADDR = 49,
+    parameter integer AUDIO_MASTER = 0,
+    parameter integer A_SDATA0 = 2,
+    parameter integer A_SDATA1 = 3,
+    parameter integer B_SDATA0 = 0,
+    parameter integer B_SDATA1 = 1,
     parameter integer SLOT_BITS = 32,
     parameter integer WORD_BITS = 24,
     parameter integer LR_POLARITY = 1,
@@ -54,7 +62,9 @@ module adau1979_capture_v1_0_S00_AXI #
 );
 
     localparam integer ADDR_LSB = (C_S_AXI_DATA_WIDTH/32) + 1;
-    localparam integer OPT_MEM_ADDR_BITS = 3;
+    // Registers 0x00..0x30 and diagnostics 0x40..0x54 require
+    // five word-index bits (AXI byte address bits [6:2]).
+    localparam integer OPT_MEM_ADDR_BITS = 5;
 
     reg [C_S_AXI_ADDR_WIDTH-1 : 0] axi_awaddr;
     reg axi_awready;
@@ -81,6 +91,14 @@ module adau1979_capture_v1_0_S00_AXI #
     reg [31:0] slv_reg10;
     reg [31:0] slv_reg11;
     reg [31:0] slv_reg12;
+    reg [31:0] slv_reg16;
+    reg [31:0] slv_reg17;
+    reg [31:0] slv_reg18;
+    reg [31:0] slv_reg19;
+    reg [31:0] slv_reg20;
+    reg [31:0] slv_reg21;
+    reg [31:0] slv_reg22;
+    reg [31:0] slv_reg23;
     reg [5:0] debug_log_wr_ptr;
     reg [5:0] debug_log_count;
     reg [5:0] debug_log_index;
@@ -140,6 +158,17 @@ module adau1979_capture_v1_0_S00_AXI #
     wire [2:0] i2c_debug_wr_bit_idx;
     wire i2c_debug_wr_ack_sample_pulse;
     wire i2c_debug_wr_ack_sample_sda;
+    wire [7:0] diag_read_data0, diag_read_data1, diag_read_data4;
+    wire [7:0] diag_read_data5, diag_read_data6;
+    wire [4:0] diag_read_valid, diag_read_error;
+    wire diag_read_done;
+    wire [63:0] device_status;
+    wire [79:0] device_readback;
+    reg [31:0] dma_frame_count;
+    always @(posedge m00_axis_aclk) begin
+        if (!m00_axis_aresetn) dma_frame_count<=0;
+        else if (m00_axis_tvalid && m00_axis_tready) dma_frame_count<=dma_frame_count+1'b1;
+    end
 
     // 64-bit trace entry format:
     // [63:60] event type (0=WRITE, 1=PLL_READ, 2=INIT_DONE,
@@ -248,11 +277,20 @@ module adau1979_capture_v1_0_S00_AXI #
         end else begin
             init_start_req <= 1'b0;
             slv_reg0[1] <= 1'b0;
-            if (packet_done_axi)
-                slv_reg0[0] <= 1'b0;
+            // Continuous mode: packet_done is only a TLAST notification.
+            // Keep the capture enable bit set across packet boundaries; it
+            // is cleared only by an explicit software stop/reinitialization.
 
             if (slv_reg_wren) begin
-                case (axi_awaddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB])
+                // OPT_MEM_ADDR_BITS is the number of register-index bits.
+                // The upper bound is inclusive, therefore subtract one;
+                // without it a legacy 6-bit AXI address (bits 5:0) would
+                // incorrectly select bit 6 and fail synthesis.
+                // Limit the slice by the actual AXI port width so a stale
+                // six-bit generated wrapper cannot produce an out-of-range
+                // part-select during synthesis.  The active BD instance is
+                // eight bits wide, which exposes diagnostic registers 0x40+.
+                case (axi_awaddr[C_S_AXI_ADDR_WIDTH-1:ADDR_LSB])
                     4'h0: begin
                         for (byte_index = 0; byte_index <= 3; byte_index = byte_index + 1)
                             if (S_AXI_WSTRB[byte_index])
@@ -311,6 +349,14 @@ module adau1979_capture_v1_0_S00_AXI #
             slv_reg10 <= 32'd0;
             slv_reg11 <= 32'd0;
             slv_reg12 <= 32'd0;
+            slv_reg16 <= 32'd0;
+            slv_reg17 <= 32'd0;
+            slv_reg18 <= 32'd0;
+            slv_reg19 <= 32'd0;
+            slv_reg20 <= 32'd0;
+            slv_reg21 <= 32'd0;
+            slv_reg22 <= 32'd0;
+            slv_reg23 <= 32'd0;
         end else begin
             slv_reg2 <= {
                 16'd0,
@@ -339,6 +385,15 @@ module adau1979_capture_v1_0_S00_AXI #
             slv_reg12 <= {debug_log_count, 2'd0, i2c_ack_error_count[3:0],
                           init_error, init_done, init_busy, i2c_verify_fail,
                           i2c_verify_fail_actual, i2c_verify_fail_expected};
+            slv_reg16 <= {20'd0, diag_read_error, diag_read_valid,
+                          diag_read_done, init_busy};
+            slv_reg17 <= {24'd0, diag_read_data0};
+            slv_reg18 <= {24'd0, diag_read_data1};
+            slv_reg19 <= {24'd0, diag_read_data4};
+            slv_reg20 <= {24'd0, diag_read_data5};
+            slv_reg21 <= {24'd0, diag_read_data6};
+            slv_reg22 <= i2s_sync_error_count;
+            slv_reg23 <= i2c_ack_error_count;
         end
     end
 
@@ -440,7 +495,7 @@ module adau1979_capture_v1_0_S00_AXI #
     assign slv_reg_rden = axi_arready & S_AXI_ARVALID & ~axi_rvalid;
 
     always @(*) begin
-        case (axi_araddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB])
+        case (axi_araddr[C_S_AXI_ADDR_WIDTH-1:ADDR_LSB])
             4'h0: reg_data_out = slv_reg0;
             4'h1: reg_data_out = slv_reg1;
             4'h2: reg_data_out = slv_reg2;
@@ -457,6 +512,32 @@ module adau1979_capture_v1_0_S00_AXI #
             4'hD: reg_data_out = {26'd0, debug_log_index};
             4'hE: reg_data_out = debug_log_selected[31:0];
             4'hF: reg_data_out = debug_log_selected[63:32];
+            5'h10: reg_data_out = slv_reg16;
+            5'h11: reg_data_out = slv_reg17;
+            5'h12: reg_data_out = slv_reg18;
+            5'h13: reg_data_out = slv_reg19;
+            5'h14: reg_data_out = slv_reg20;
+            5'h15: reg_data_out = slv_reg21;
+            5'h16: reg_data_out = slv_reg22;
+            5'h17: reg_data_out = slv_reg23;
+            6'h18: reg_data_out = 32'hAD790208; // ABI ID: dual, 8 channels
+            6'h19: reg_data_out = {17'd0, (B_SDATA1[1:0]), (B_SDATA0[1:0]),
+                (A_SDATA1[1:0]), (A_SDATA0[1:0]), 5'd0, (AUDIO_MASTER!=0), (DUAL_ENABLE!=0)};
+            6'h20: reg_data_out = device_status[31:0];
+            6'h21: reg_data_out = {24'd0,device_readback[7:0]};
+            6'h22: reg_data_out = {24'd0,device_readback[15:8]};
+            6'h23: reg_data_out = {24'd0,device_readback[23:16]};
+            6'h24: reg_data_out = {24'd0,device_readback[31:24]};
+            6'h25: reg_data_out = {24'd0,device_readback[39:32]};
+            6'h28: reg_data_out = device_status[63:32];
+            6'h29: reg_data_out = {24'd0,device_readback[47:40]};
+            6'h2A: reg_data_out = {24'd0,device_readback[55:48]};
+            6'h2B: reg_data_out = {24'd0,device_readback[63:56]};
+            6'h2C: reg_data_out = {24'd0,device_readback[71:64]};
+            6'h2D: reg_data_out = {24'd0,device_readback[79:72]};
+            6'h2E: reg_data_out = {14'd0,i2c_verify_fail_code,i2c_verify_fail,
+                i2c_verify_fail_dev_addr,i2c_verify_fail_reg_addr};
+            6'h2F: reg_data_out = dma_frame_count;
             default: reg_data_out = 32'd0;
         endcase
     end
@@ -469,6 +550,10 @@ module adau1979_capture_v1_0_S00_AXI #
     end
 
     adau1979_i2c_init #(
+        .DUAL_ENABLE(DUAL_ENABLE),
+        .DEVICE_A_ADDR(DEVICE_A_ADDR),
+        .DEVICE_B_ADDR(DEVICE_B_ADDR),
+        .AUDIO_MASTER(AUDIO_MASTER),
         .CLK_HZ(CLK_HZ),
         .I2C_HZ(I2C_HZ)
     ) adau1979_i2c_init_i (
@@ -507,6 +592,16 @@ module adau1979_capture_v1_0_S00_AXI #
         .verify_fail_reg_addr(i2c_verify_fail_reg_addr),
         .verify_fail_expected(i2c_verify_fail_expected),
         .verify_fail_actual(i2c_verify_fail_actual),
+        .device_status(device_status),
+        .device_readback(device_readback),
+        .diag_read_data0(diag_read_data0),
+        .diag_read_data1(diag_read_data1),
+        .diag_read_data4(diag_read_data4),
+        .diag_read_data5(diag_read_data5),
+        .diag_read_data6(diag_read_data6),
+        .diag_read_valid(diag_read_valid),
+        .diag_read_error(diag_read_error),
+        .diag_read_done(diag_read_done),
         .debug_wr_state(i2c_debug_wr_state),
         .debug_wr_byte_idx(i2c_debug_wr_byte_idx),
         .debug_wr_bit_idx(i2c_debug_wr_bit_idx),
@@ -519,6 +614,11 @@ module adau1979_capture_v1_0_S00_AXI #
     );
 
     adau1979_capture_core #(
+        .DUAL_ENABLE(DUAL_ENABLE),
+        .A_SDATA0(A_SDATA0),
+        .A_SDATA1(A_SDATA1),
+        .B_SDATA0(B_SDATA0),
+        .B_SDATA1(B_SDATA1),
         .SLOT_BITS(SLOT_BITS),
         .WORD_BITS(WORD_BITS),
         .LR_POLARITY(LR_POLARITY),

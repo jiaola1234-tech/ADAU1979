@@ -3,7 +3,15 @@
 module adau1979_capture_v1_0 #
 (
     parameter integer C_S00_AXI_DATA_WIDTH = 32,
-    parameter integer C_S00_AXI_ADDR_WIDTH = 6,
+    parameter integer C_S00_AXI_ADDR_WIDTH = 8,
+    parameter integer DUAL_ENABLE = 1,
+    parameter integer DEVICE_A_ADDR = 17,
+    parameter integer DEVICE_B_ADDR = 49,
+    parameter integer AUDIO_MASTER = 0,
+    parameter integer A_SDATA0 = 2,
+    parameter integer A_SDATA1 = 3,
+    parameter integer B_SDATA0 = 0,
+    parameter integer B_SDATA1 = 1,
     parameter integer SLOT_BITS = 32,
     parameter integer WORD_BITS = 24,
     parameter integer LR_POLARITY = 1,
@@ -54,6 +62,16 @@ module adau1979_capture_v1_0 #
     input  wire  s00_axi_rready
 );
 
+    // synthesis translate_off
+    initial begin
+        if (C_S00_AXI_ADDR_WIDTH < 8) $fatal(1,"dual diagnostics require 8 address bits");
+        if ((AUDIO_MASTER!=0 && AUDIO_MASTER!=1) || (!DUAL_ENABLE && AUDIO_MASTER!=0))
+            $fatal(1,"invalid audio master");
+        if (DUAL_ENABLE && DEVICE_A_ADDR==DEVICE_B_ADDR) $fatal(1,"duplicate I2C address");
+        if (DEVICE_A_ADDR<0 || DEVICE_A_ADDR>127 || DEVICE_B_ADDR<0 || DEVICE_B_ADDR>127)
+            $fatal(1,"use 7-bit I2C addresses");
+    end
+    // synthesis translate_on
     wire adau_sda_i;
     wire adau_scl_oe_n;
     wire adau_sda_oe_n;
@@ -89,6 +107,14 @@ module adau1979_capture_v1_0 #
     adau1979_capture_v1_0_S00_AXI #(
         .C_S_AXI_DATA_WIDTH(C_S00_AXI_DATA_WIDTH),
         .C_S_AXI_ADDR_WIDTH(C_S00_AXI_ADDR_WIDTH),
+        .DUAL_ENABLE(DUAL_ENABLE),
+        .DEVICE_A_ADDR(DEVICE_A_ADDR),
+        .DEVICE_B_ADDR(DEVICE_B_ADDR),
+        .AUDIO_MASTER(AUDIO_MASTER),
+        .A_SDATA0(A_SDATA0),
+        .A_SDATA1(A_SDATA1),
+        .B_SDATA0(B_SDATA0),
+        .B_SDATA1(B_SDATA1),
         .SLOT_BITS(SLOT_BITS),
         .WORD_BITS(WORD_BITS),
         .LR_POLARITY(LR_POLARITY),
