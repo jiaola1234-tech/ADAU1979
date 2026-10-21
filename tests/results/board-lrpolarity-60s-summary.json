@@ -1,0 +1,89 @@
+{
+  "tested_source": "Final corrected source after LR polarity review; source commit recorded after this evidence.",
+  "date": "2026-10-21",
+  "timezone": "Asia/Shanghai",
+  "port": "COM5",
+  "baud": 921600,
+  "configuration": {
+    "A": {
+      "addr7": "0x31",
+      "role": "slave",
+      "sdata": [
+        0,
+        1
+      ],
+      "words": "0..3",
+      "LR_POLARITY": 0
+    },
+    "B": {
+      "addr7": "0x11",
+      "role": "master",
+      "sdata": [
+        2,
+        3
+      ],
+      "words": "4..7",
+      "LR_POLARITY": 0
+    },
+    "adc_register_04": "0xBF (LR_POL=1; FPGA high-slot first)"
+  },
+  "command": "python tests/board_acceptance.py --port COM5 --seconds 60 --output build/board-lrpolarity-acceptance.txt",
+  "acceptance_exit_code": 0,
+  "progress_rows": 61,
+  "observed_progress_seconds_at_least": 60,
+  "first": {
+    "status": 3845,
+    "i2s_frames": 2128105,
+    "dma_blocks": 46,
+    "fifo_frames": 0,
+    "fifo_overflows": 0,
+    "err_total": 0,
+    "i2s_sync_err": 0,
+    "i2c_ack_err": 0,
+    "display_skipped_blocks": 33,
+    "axis_frames": 48043,
+    "DMASR": 0
+  },
+  "last": {
+    "status": 3845,
+    "i2s_frames": 5010503,
+    "dma_blocks": 2861,
+    "fifo_frames": 0,
+    "fifo_overflows": 0,
+    "err_total": 0,
+    "i2s_sync_err": 0,
+    "i2c_ack_err": 0,
+    "display_skipped_blocks": 2253,
+    "axis_frames": 2930441,
+    "DMASR": 0
+  },
+  "dma_block_delta": 2815,
+  "i2s_frame_delta": 2882398,
+  "axis_frame_delta": 2882398,
+  "all_error_snapshots_zero": true,
+  "q_stop_confirmed": true,
+  "ddr_read": {
+    "metadata": "active=6 completed=2862 last=5",
+    "blocks": [
+      7,
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "frames": 7168,
+    "signed_24_to_32_all_words_pass": true,
+    "user_input": "0x31 VIN1/CH1, 1 kHz, 1 Vpp",
+    "observed_signal_printed_channel": 1,
+    "frequency_hz_nominal_48khz": 1000.1222722856954,
+    "channel_1_ac_rms_codes": 4296370.372306962,
+    "other_channels_max_ac_rms_codes": 526.0667674006216,
+    "physical_mapping": "0x31 VIN1 is at printed ch1 after LR_POLARITY=0 correction; other seven physical inputs not injected"
+  },
+  "sha256": {
+    "build/vivado/dual_adau1979.runs/impl_1/design_1_wrapper.bit": "b74dfbfe565dbb1369976981046fc50544491cb4f711e1084b435984c0d79e7d",
+    "build/vitis/dual_capture/Debug/dual_capture.elf": "19feda9f4ddf54f51aa3d71ee637982b5475cabb5e20b977717de719c62a302e"
+  }
+}

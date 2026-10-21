@@ -6,7 +6,7 @@ module stream_tb;
  wire valid,last,full,packet;
  reg ready=0; integer cycles=0,received=0,packets=0,produced=0,f,j,lane;
  reg stalled=0, held_last; reg [255:0] held;
- parameter DUAL=1, SWAP=0;
+ parameter DUAL=1, SWAP=0, INVERT_LR=0;
  function [23:0] sample;
   input integer frame_no,line_no,right_slot;
   begin
@@ -30,6 +30,7 @@ module stream_tb;
   end
  endfunction
  adau1979_capture_core #(.FIFO_ADDR_WIDTH(10),.DUAL_ENABLE(DUAL),
+   .LR_POLARITY(INVERT_LR ? 0:1),
    .A_SDATA0(SWAP ? 0:2),.A_SDATA1(SWAP ? 1:3),.B_SDATA0(SWAP ? 2:0),.B_SDATA1(SWAP ? 3:1)) dut(
   .clk(clk),.rstn(rstn),.capture_enable(enable),.init_done(1'b1),.sample_len(32'd1024),
   .bclk(bclk),.lrclk(lr),.sdata(sdata),.m_axis_tdata(data),.m_axis_tkeep(keep),
@@ -41,7 +42,7 @@ module stream_tb;
   reg [23:0] v;
   integer bit_no,k;
   begin
-   bclk=0; lr=right_slot; sdata=0; #80;
+   bclk=0; lr=right_slot ^ INVERT_LR; sdata=0; #80;
    // One full I2S delay, then 24 significant bits, 7 remaining slot clocks.
    for(bit_no=0;bit_no<32;bit_no=bit_no+1) begin
     bclk=0;
@@ -72,12 +73,13 @@ module stream_tb;
   end
  end
  initial begin
+  lr=1 ^ INVERT_LR;
   #100 rstn=1; enable=1; #200;
   // Start on a complete LRCLK pair; the first captured frame must be zero.
   for(f=0;f<3072;f=f+1) begin slot(f,0); slot(f,1); end
   wait(received==3072); #100;
   if(ovf || syncerr || frames!=3072 || packets!=3) $fatal(1,"counts frames=%d packets=%d sync=%d ovf=%d",frames,packets,syncerr,ovf);
-  $display("PASS stream DUAL=%0d SWAP=%0d 3072 distinct frames, 3 TLAST, stable backpressure",DUAL,SWAP);
+  $display("PASS stream DUAL=%0d SWAP=%0d INVERT_LR=%0d 3072 distinct frames, 3 TLAST, stable backpressure",DUAL,SWAP,INVERT_LR);
   $finish;
  end
  initial begin #100000000; $fatal(1,"stream timeout received=%d frames=%d",received,frames); end
@@ -85,3 +87,7 @@ endmodule
 
 module stream_swap_tb; stream_tb #(.SWAP(1)) tb(); endmodule
 module stream_single_tb; stream_tb #(.DUAL(0)) tb(); endmodule
+
+// 0x04=0xBF sets LR_POL=1: high carries CH1/3, low carries CH2/4.
+// Keep per-frame data distinct to detect incorrect pairing across frames.
+module stream_inverted_lr_tb; stream_tb #(.SWAP(1),.INVERT_LR(1)) tb(); endmodule

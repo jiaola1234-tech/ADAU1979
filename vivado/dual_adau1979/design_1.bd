@@ -3057,19 +3057,19 @@
         "inst_hier_path": "adau1979_capture_0",
         "parameters": {
           "AUDIO_MASTER": {
-            "value": "0"
+            "value": "1"
           },
           "A_SDATA0": {
-            "value": "2"
-          },
-          "A_SDATA1": {
-            "value": "3"
-          },
-          "B_SDATA0": {
             "value": "0"
           },
-          "B_SDATA1": {
+          "A_SDATA1": {
             "value": "1"
+          },
+          "B_SDATA0": {
+            "value": "2"
+          },
+          "B_SDATA1": {
+            "value": "3"
           },
           "CLK_HZ": {
             "value": "100000000"
@@ -3078,10 +3078,10 @@
             "value": "8"
           },
           "DEVICE_A_ADDR": {
-            "value": "17"
+            "value": "49"
           },
           "DEVICE_B_ADDR": {
-            "value": "49"
+            "value": "17"
           },
           "DUAL_ENABLE": {
             "value": "1"
@@ -3096,7 +3096,7 @@
             "value": "1"
           },
           "LR_POLARITY": {
-            "value": "1"
+            "value": "0"
           },
           "SLOT_BITS": {
             "value": "32"

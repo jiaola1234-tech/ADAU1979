@@ -1,5 +1,6 @@
 `timescale 1ns/1ps
 module axi_tb;
+ parameter REORDER=0;
  reg clk=0; always #5 clk=~clk;
  reg rstn=0;
  reg [7:0] awaddr=0,araddr=0; reg [31:0] wdata=0;
@@ -12,7 +13,10 @@ module axi_tb;
  wire [7:0] ra,rb;
  adau_model #(.ADDRESS(7'h11)) a(scl,pd,sda,1'b0,1'b0,1'b0,ra);
  adau_model #(.ADDRESS(7'h31)) b(scl,pd,sda,(scenario==1),1'b0,1'b0,rb);
- adau1979_capture_v1_0_S00_AXI #(.CLK_HZ(100000),.I2C_HZ(1000)) dut(
+ adau1979_capture_v1_0_S00_AXI #(.CLK_HZ(100000),.I2C_HZ(1000),
+  .LR_POLARITY(REORDER ? 0:1),
+  .DEVICE_A_ADDR(REORDER ? 49:17),.DEVICE_B_ADDR(REORDER ? 17:49),.AUDIO_MASTER(REORDER ? 1:0),
+  .A_SDATA0(REORDER ? 0:2),.A_SDATA1(REORDER ? 1:3),.B_SDATA0(REORDER ? 2:0),.B_SDATA1(REORDER ? 3:1)) dut(
   .adau_bclk(bclk),.adau_lrclk(lr),.adau_sdata(audio),.adau_pd_rst(pd),.adau_sda_i(sda),
   .adau_scl_oe_n(scl),.adau_sda_oe_n(sda_release),.m00_axis_aclk(clk),.m00_axis_aresetn(rstn),
   .m00_axis_tdata(data),.m00_axis_tkeep(keep),.m00_axis_tlast(last),.m00_axis_tvalid(valid),.m00_axis_tready(1'b1),
@@ -60,7 +64,7 @@ module axi_tb;
   if($test$plusargs("scenario2")) scenario=2;
   if($test$plusargs("scenario3")) scenario=3;
   #100 rstn=1; #100;
-  expect_reg(8'h60,32'hAD790208); expect_reg(8'h64,32'h2701);
+  expect_reg(8'h60,32'hAD790208); expect_reg(8'h64,REORDER ? 32'h7203:32'h2701);
   write_reg(8'h04,1024); write_reg(8'h00,1);
   // RO high-bank writes must not alias legacy control/sample length.
   write_reg(8'h80,0); write_reg(8'h84,123);
@@ -69,25 +73,26 @@ module axi_tb;
   if(scenario==1) begin
    if(!dut.init_error) $fatal(1,"NACK must fail");
    expect_reg(8'hB8,32'h1B1FF);
-   expect_reg(8'hC0,32'h1100); expect_reg(8'hC4,32'h3103);
+   expect_reg(8'hC0,REORDER ? 32'h3103:32'h1100); expect_reg(8'hC4,REORDER ? 32'h1100:32'h3103);
    #100000; if(received!=0) $fatal(1,"NACK capture enabled");
   end else begin
-   expect_reg(8'h80,32'h0023F07E); expect_reg(8'hA0,32'h0062F07E);
+   expect_reg(8'h80,REORDER ? 32'h0062F07E:32'h0023F07E); expect_reg(8'hA0,REORDER ? 32'h0023F07E:32'h0062F07E);
    expect_reg(8'h84,1); expect_reg(8'h88,8'hc3); expect_reg(8'h8c,8'hbf);
-   expect_reg(8'h90,2); expect_reg(8'h94,1);
+   expect_reg(8'h90,2); expect_reg(8'h94,REORDER ? 0:1);
    expect_reg(8'ha4,1); expect_reg(8'ha8,8'hc3); expect_reg(8'hac,8'hbf);
-   expect_reg(8'hb0,2); expect_reg(8'hb4,0);
-   expect_reg(8'h40,32'h7e); expect_reg(8'h44,1); expect_reg(8'h54,1);
+   expect_reg(8'hb0,2); expect_reg(8'hb4,REORDER ? 1:0);
+   expect_reg(8'h40,32'h7e); expect_reg(8'h44,1); expect_reg(8'h54,REORDER ? 0:1);
    expect_reg(8'hB8,0);
-   expect_reg(8'hC0,32'h1107); expect_reg(8'hC4,32'h3107);
+   expect_reg(8'hC0,REORDER ? 32'h3107:32'h1107); expect_reg(8'hC4,REORDER ? 32'h1107:32'h3107);
    write_reg(8'hC0,0); write_reg(8'hC4,0);
    expect_reg(8'h00,1); expect_reg(8'h04,1024);
-   expect_reg(8'hC0,32'h1107); expect_reg(8'hC4,32'h3107);
+   expect_reg(8'hC0,REORDER ? 32'h3107:32'h1107); expect_reg(8'hC4,REORDER ? 32'h1107:32'h3107);
    wait(received>=2048); #100;
    expect_reg(8'h00,1); // Packet notification never disarms continuous capture.
    read_reg(8'hBC); if(value<2048 || packets!=2) $fatal(1,"continuous packet count");
   end
-  $display("PASS AXI scenario=%0d banks>=0x80 no alias, init gate, continuous START",scenario); $finish;
+  $display("PASS AXI scenario=%0d REORDER=%0d banks>=0x80 no alias, init gate, continuous START",scenario,REORDER); $finish;
  end
  initial begin #50000000; $fatal(1,"AXI timeout received=%d",received); end
 endmodule
+module axi_reordered_tb; axi_tb #(.REORDER(1)) tb(); endmodule

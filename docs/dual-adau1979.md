@@ -29,25 +29,29 @@
 | 有效 XDC | `vivado/dual_adau1979/adau1979.xdc` |
 | Vitis 应用主源 | `ws1/design_1_wrapper_lianxu_/src/main.c` |
 | 应用构建 | `scripts/build_dual_vitis.tcl`，生成 `build/vitis/dual_capture` |
+| 交付 Vitis 工程 | `scripts/build_adau1979_vitis.tcl`，平台 `adau1979_platform`，应用 `adau1979` |
 | 软件寄存器头 | 上述 src 内与 IP drivers 内的 `adau1979_capture.h`，两者保持一致 |
 
 构建脚本生成 `build/vivado/dual_adau1979.xpr`、`build/dual_adau1979.xsa`，
 仅在 `build` 内生成 BD/IP/BSP/ELF，使用仓库内相对路径。
 旧的 Vivado 工程和 Vitis 应用保留，不是本次双芯片构建入口。
+交付下载文件由同一 XSA/位流生成：`build/adau1979.xsa`、`build/adau1979.bit`、
+`build/vitis_adau1979/adau1979/Debug/adau1979.elf`；使用 `scripts/program_adau1979.tcl` 下载。
 不要使用旧平台缓存，也不要直接重新导入含原机器绝对路径的旧 `.prj`。
 
 ## 地址、角色与接线
 
-逻辑设备 A 指原来已验证的器件，逻辑设备 B 指新增器件；
+逻辑设备 A 对应输出前四路，逻辑设备 B 对应输出后四路。
+当前配置为 A=0x31、B=0x11，0x11 保持已验证的时钟主机角色；
 **逻辑编号、I²C 地址、原理图 U1/U2 位号、SDATA 下标是独立概念**。
 历史地址绑带说明曾按 U1=0x11、U2=0x31 记录，但不足以证明当前实物位号与数据线对应。
-本次默认保留已成功路径 `0x11 + sdata[2]/[3]`，不会根据 U1/U2 字样交换数据线。
+当前实物路径保持 `0x11 + sdata[2]/[3]`、`0x31 + sdata[0]/[1]`，不会根据 U1/U2 字样交换数据线。
 上板前需以电阻绑带和通断测量确认此表；软件能读回地址/角色/映射，不能识别物理丝印。
 
 | 逻辑芯片 | 默认 7 位地址 | 音频角色 | CH1/2 数据线 | CH3/4 数据线 | DDR 字 |
 |---|---|---|---|---|---|
-| A：原成功芯片 | 0x11 | 主机，0x06=0x01 | sdata[2]，V15，H4 pin8 | sdata[3]，W15，H4 pin7 | word0..3 |
-| B：新增芯片 | 0x31 | 从机，0x06=0x00 | sdata[0]，Y16，H4 pin6 | sdata[1]，Y17，H4 pin5 | word4..7 |
+| A：前四路 | 0x31 | 从机，0x06=0x00 | sdata[0]，Y16，H4 pin6 | sdata[1]，Y17，H4 pin5 | word0..3 / ch1..4 |
+| B：后四路 | 0x11 | 主机，0x06=0x01 | sdata[2]，V15，H4 pin8 | sdata[3]，W15，H4 pin7 | word4..7 / ch5..8 |
 
 | 公共信号 | FPGA 管脚 | 说明 |
 |---|---|---|
@@ -62,11 +66,16 @@
 本交付保留实际约束并修正注释；H4 数据线位置来自原接线说明，
 新增芯片的实物接线仍必须按表核实。
 
-在 `scripts/dual_config.tcl` 分别设置 `DEVICE_A_ADDR`、`DEVICE_B_ADDR`（十进制 17、49），
-`AUDIO_MASTER`（0=A、1=B），以及 `A_SDATA0/1`、`B_SDATA0/1`。
+在 `scripts/dual_config.tcl` 分别设置 `DEVICE_A_ADDR`、`DEVICE_B_ADDR`（当前十进制 49、17），
+`AUDIO_MASTER`（0=A、1=B，当前为 1），以及 `A_SDATA0/1`（当前 0/1）、`B_SDATA0/1`（当前 2/3）。
+实际工程配置以该脚本和 BD 实例参数为准；可复用 IP 的 HDL 缺省参数仍保留原始选项。
 I²C 引擎始终接收 7 位地址，内部追加 R/W；不能传入 0x22/0x23。
 构建时检查地址取自合法绑带候选 0x11/0x31/0x51/0x71、地址不同、四线不重复、主机唯一。
 要交换角色，只修改 `AUDIO_MASTER`，不会改变字顺序或数据线。
+当前双芯片配置还显式设置 `LR_POLARITY=0`，匹配实际保留的 ADC `0x04=0xBF`
+中的 `LR_POL=1`：CH1/3 在 LRCLK 高时隙，随后低时隙为 CH2/4。
+这是接收器已有参数，选择整帧起点，不是事后交换相邻帧中的字。
+`single` 恢复保留原已验证配置的 `LR_POLARITY=1`；其物理通道顺序仍需信号注入核验。
 
 ## 初始化和数据行为
 
@@ -89,11 +98,12 @@ C3 包含 PLL_LOCK bit7 和原配置的低 7 位 43。
 只有启用的所有器件都通过，`init_done` 才有效；硬件和软件都据此禁止未验证采集。
 
 接收器保留原上升沿采样、同步器、I²S 延迟和左右时隙判定。
-默认已有逻辑将 LRCLK 低电平时隙作为每线的首个字、高电平时隙作为第二个字；
-本次不改变这一已验证行为。增加完整首时隙有效标记，避免从半帧启动时混合两帧。
-八个 24 位值统一符号扩展，256 位低字在 DDR 中先出现：
+接收器 `LR_POLARITY=1` 时低时隙在前，`0` 时高时隙在前；
+当前双芯片选择高时隙起始，以匹配 ADC 已启用的 LRCLK 反转。
+I²S 一个 BCLK 延迟、上升沿采样及完整首时隙有效标记保持不变，避免混合相邻帧。
+八个 24 位值统一符号扩展，256 位低字在 DDR 中先出现，目标物理通道顺序为：
 
-`A CH1, A CH2, A CH3, A CH4, B CH1, B CH2, B CH3, B CH4`。
+`0x31 CH1, 0x31 CH2, 0x31 CH3, 0x31 CH4, 0x11 CH1, 0x11 CH2, 0x11 CH3, 0x11 CH4`。
 
 TLAST 每 1024 个成功 AXIS 握手出现一次；包边界只重置包内索引，
 不清 FIFO、不重新初始化、不清 START，也不重置 I²S 接收器。
@@ -125,7 +135,7 @@ I²S 总帧数从 FPGA 复位累计，包含正式采集前的时钟帧，
 ## AXI 地址兼容性
 
 IP 基址维持 `0x44A00000`，DMA 基址维持 `0x40400000`。
-原 `0x00..0x5C` 布局保留，包括 0x40..0x54 的 A 诊断；0x10 仍是原包内索引。
+原 `0x00..0x5C` 布局保留，包括 0x40..0x54 的逻辑 A 诊断（当前为 0x31）；0x10 仍是原包内索引。
 地址译码覆盖完整 8 位 AXI 地址，打包、顶层、AXI 子模块及 BD 均为 8 位。
 DMA 仍是 Simple S2MM，输入 256 位、TKEEP=32'hFFFFFFFF，未改变 BD DMA/互连拓扑。
 
@@ -176,7 +186,7 @@ xsct.bat scripts/build_dual_vitis.tcl
 xsct.bat scripts/build_dual_vitis.tcl
 ```
 
-此配置只初始化 A=0x11、A 作主机，保留 sdata[2]/[3]，word4..7 补零。
+此配置只初始化 A=0x11、A 作主机，保留 sdata[2]/[3] 及原 LR_POLARITY=1，word4..7 补零。
 仍使用相同连续 DMA 环，不是旧单次测试。重新回到双芯片时不加 `-tclargs single` 即可。
 若实物新增芯片未复位/重新上电，切换主机前必须确保公共复位实际连到两颗，不能只依赖 FPGA 配置重载。
 
@@ -206,11 +216,23 @@ xsct.bat scripts/build_dual_vitis.tcl
    检查其余通道没有串位。100 ms 快照不能代替波形/频率质量分析。
 4. 手动保存实物位号—地址—SDATA—打印通道记录和 UART 日志，才可宣称双芯片上板通过。
 
-2026-10-21 19:28–19:29，用户重焊 0x11 后，使用同一双芯片构建重新下载，
+当前默认配置为 0x31 前四路、0x11 后四路，0x11 仍为时钟主机。
+19:44 的 JTAG 扫描链故障在用户重新连接后恢复，新的芯片组顺序已下载并通过至少 60 秒连续采集。
+DMA 46→2861；I²S 和 AXIS 均增加 2882395；溢出/同步/I²C/DMA 错误均为 0；q 停止确认。
+原始记录见 `tests/results/board-reordered-60s-uart.txt` 和对应 summary JSON。
+
+用户确认将 1 kHz、1 Vpp 信号接入 0x31 VIN1/CH1。修正接收器极性之前，
+七个完整 DDR 块（7168 帧）中强信号出现在 ch2，过零周期估算约 1000.03 Hz（假定 48 kHz）。
+结合标准 I²S 时序图、ADC 0x04 bit7 的反转配置，接收器改为 LR_POLARITY=0，
+以高→低时隙组成同一帧；没有修改采样边沿、延迟、增益或 ADC 初始化脚本。
+最终构建和复测见 `tests/results/validation.md`；其余七路仍需逐路注入，不能宣称全部物理映射通过。
+采样曾出现满幅码，不能据此宣称模拟幅度或失真合格。
+
+此前在旧输出顺序下，2026-10-21 19:28–19:29，用户重焊 0x11 后，使用同一双芯片构建重新下载，
 两颗的地址 ACK、配置写 ACK、PLL 和五项读回均通过，正式八通道连续采集至少 60 秒通过。
 DMA 完成块从 46 增至 2861；I²S 和 AXIS 帧均增加 2882396；
 FIFO 溢出、同步错误和 I²C 错误全程为 0，DMASR 无错误；q 停止得到确认。
-用户当前没有信号源，逐路物理信号对应测试尚未执行。
+当时没有信号源；当前已进行 0x31 VIN1 的单路注入，其余七路仍待测试。
 完整结果见 `tests/results/validation.md`、`tests/results/board-60s-summary.json`，
 原始串口文本见 `tests/results/board-60s-uart.txt`。
 重焊前的 NACK 记录保留在 `tests/results/board-init.txt`、`tests/results/board-probe-init.txt`。

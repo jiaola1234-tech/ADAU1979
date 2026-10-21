@@ -68,8 +68,9 @@ module init_tb;
  integer scenario=0, reset_edges=0, writes=0, last_slave_write=0;
  integer cycles=0, slave_verified_cycle=-1;
  reg previous_pd=0;
- parameter MASTER=0, DUAL=1;
- adau1979_i2c_init #(.CLK_HZ(100000),.I2C_HZ(1000),.AUDIO_MASTER(MASTER),.DUAL_ENABLE(DUAL)) dut(
+ parameter MASTER=0, DUAL=1, A_ADDR=17, B_ADDR=49;
+ adau1979_i2c_init #(.CLK_HZ(100000),.I2C_HZ(1000),.AUDIO_MASTER(MASTER),.DUAL_ENABLE(DUAL),
+  .DEVICE_A_ADDR(A_ADDR),.DEVICE_B_ADDR(B_ADDR)) dut(
   .clk(clk),.rstn(rstn),.init_start(start),.adau_sda_i(sda),.adau_scl_oe_n(scl),
   .adau_sda_oe_n(sda_release),.adau_pd_rst(pd),.init_busy(busy),.init_done(done),
   .init_error(error),.device_status(ds),.device_readback(rb),.device_probe_status(probe),
@@ -86,7 +87,7 @@ module init_tb;
   if(role_a[0] && role_b[0]) $fatal(1,"two audio clock masters");
   if(dut.i2c_start) begin
    if(!dut.probing) writes=writes+1;
-   if(writes==0 && DUAL && dut.I2C_ADDR!=(MASTER==0 ? 7'h31 : 7'h11)) $fatal(1,"slave not first");
+   if(writes==0 && DUAL && dut.I2C_ADDR!=(MASTER==0 ? B_ADDR : A_ADDR)) $fatal(1,"slave not first");
    if(DUAL && dut.is_master &&
       (slave_verified_cycle<0 || cycles-slave_verified_cycle<10000)) $fatal(1,"master started before 100 ms settle");
   end
@@ -106,7 +107,7 @@ module init_tb;
    if(!done || error || !ds[14] || (DUAL && !ds[46])) $fatal(1,"success missing ds=%h rb=%h code=%d",ds,rb,code);
    if(rb[39:32]!=(MASTER==0 ? 1:0) || (DUAL && rb[79:72]!=(MASTER==1 ? 1:0))) $fatal(1,"role readback");
    if(writes!=(DUAL ? 30:15)) $fatal(1,"write count %d",writes);
-   if(probe[15:0]!=16'h1107 || (DUAL && probe[31:16]!=16'h3107)) $fatal(1,"probe status %h",probe);
+   if(probe[15:0]!=((A_ADDR<<8)|7) || (DUAL && probe[31:16]!=((B_ADDR<<8)|7))) $fatal(1,"probe status %h",probe);
    if(a.probes!=1 || a.config_writes!=15 || (DUAL && (b.probes!=1 || b.config_writes!=15)))
     $fatal(1,"probe must be address-only, then exactly 15 register writes");
   end else begin
@@ -117,7 +118,7 @@ module init_tb;
    if(scenario==2 && (code!=2 || failreg!=1 || errs!=0)) $fatal(1,"PLL details");
    if(scenario==3 && (code!=3 || failreg!=4 || !ds[36] || !ds[41])) $fatal(1,"readback mismatch details ds=%h",ds);
   end
-  $display("PASS init scenario=%0d MASTER=%0d DUAL=%0d ds=%h rb=%h probe=%h settle>=100ms",scenario,MASTER,DUAL,ds,rb,probe);
+  $display("PASS init scenario=%0d MASTER=%0d DUAL=%0d A=%h B=%h ds=%h rb=%h probe=%h settle>=100ms",scenario,MASTER,DUAL,A_ADDR,B_ADDR,ds,rb,probe);
   $finish;
  end
  initial begin #100000000; $fatal(1,"init timeout"); end
@@ -125,3 +126,4 @@ endmodule
 
 module init_master1_tb; init_tb #(.MASTER(1)) tb(); endmodule
 module init_single_tb; init_tb #(.DUAL(0)) tb(); endmodule
+module init_reordered_tb; init_tb #(.MASTER(1),.A_ADDR(49),.B_ADDR(17)) tb(); endmodule

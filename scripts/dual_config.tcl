@@ -1,12 +1,23 @@
 # Decimal values are 7-bit addresses (17=0x11, 49=0x31).
-# Logical A is the already verified device. Never infer this from U1/U2 silk.
-set capture_config [list CONFIG.DUAL_ENABLE 1 CONFIG.DEVICE_A_ADDR 17 CONFIG.DEVICE_B_ADDR 49 \
-    CONFIG.AUDIO_MASTER 0 CONFIG.A_SDATA0 2 CONFIG.A_SDATA1 3 CONFIG.B_SDATA0 0 CONFIG.B_SDATA1 1 \
-    CONFIG.C_S00_AXI_ADDR_WIDTH 8]
+# Logical A is the first four output words; B is the last four. No U1/U2 inference.
+# 0x31 -> word0..3, SDATA[0]/[1]; 0x11 -> word4..7, SDATA[2]/[3].
+# Keep the proven physical clock master at 0x11 (now logical B).
+# Register 0x04=0xBF has LR_POL=1: CH1/3 are on LRCLK high.
+# RX LR_POLARITY=0 starts on the high slot, then pairs the following low slot.
+set capture_config [list CONFIG.DUAL_ENABLE 1 CONFIG.DEVICE_A_ADDR 49 CONFIG.DEVICE_B_ADDR 17 \
+    CONFIG.AUDIO_MASTER 1 CONFIG.A_SDATA0 0 CONFIG.A_SDATA1 1 CONFIG.B_SDATA0 2 CONFIG.B_SDATA1 3 \
+    CONFIG.LR_POLARITY 0 CONFIG.C_S00_AXI_ADDR_WIDTH 8]
 # Recovery: vivado ... -tclargs single (same continuous ring, A-only, B words zero).
 if {[llength $argv] && [lindex $argv 0] eq "single"} {
+    dict set capture_config CONFIG.LR_POLARITY 1
     dict set capture_config CONFIG.DUAL_ENABLE 0
     dict set capture_config CONFIG.AUDIO_MASTER 0
+    dict set capture_config CONFIG.DEVICE_A_ADDR 17
+    dict set capture_config CONFIG.DEVICE_B_ADDR 49
+    dict set capture_config CONFIG.A_SDATA0 2
+    dict set capture_config CONFIG.A_SDATA1 3
+    dict set capture_config CONFIG.B_SDATA0 0
+    dict set capture_config CONFIG.B_SDATA1 1
 }
 set dual [dict get $capture_config CONFIG.DUAL_ENABLE]
 set master [dict get $capture_config CONFIG.AUDIO_MASTER]

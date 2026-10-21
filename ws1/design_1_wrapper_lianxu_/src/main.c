@@ -241,6 +241,7 @@ static int wait_for_init(void)
 
         if ((status & ADAU1979_CAPTURE_STATUS_INIT_DONE) != 0u) {
             xil_printf("ADAU1979 initialization complete; checking both device banks\r\n");
+            if (print_configuration()!=XST_SUCCESS) return XST_FAILURE;
             return print_i2c_readback();
         }
 

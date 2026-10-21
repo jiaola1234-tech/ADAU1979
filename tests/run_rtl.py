@@ -36,8 +36,11 @@ call("xvlog", ["--sv", *sources, *benches], "compile")
 summary = []
 for top, scenarios in (
     ("init_tb", range(7)), ("init_master1_tb", [0]), ("init_single_tb", [0]),
+    ("init_reordered_tb", [0]),
     ("stream_tb", [0]), ("stream_swap_tb", [0]), ("stream_single_tb", [0]),
+    ("stream_inverted_lr_tb", [0]),
     ("axi_tb", [0, 1]),
+    ("axi_reordered_tb", [0, 1]),
 ):
     call("xelab", [top, "-s", top], "elaborate_" + top)
     for scenario in scenarios:

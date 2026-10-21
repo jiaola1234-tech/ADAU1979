@@ -4,10 +4,10 @@
 
 | 检查 | 结果 |
 |---|---|
-| XSim 2022.2 RTL | 加入探测/延时后 14 个场景全部 PASS，逐项输出见 `rtl-summary.txt` |
+| XSim 2022.2 RTL | 当前输出顺序及反转 LRCLK 场景共 18 项；最终输出见 `rtl-summary.txt` |
 | 完整 BD 验证 | PASS，8 位寄存器地址、256 位 AXIS，Simple S2MM 拓扑保留 |
 | Vivado 2022.2 综合/布局布线/bitstream | PASS，脚本输出 `DUAL_BUILD_PASS` |
-| 时序（加入探测/延时后重新实现） | WNS=0.622 ns，TNS=0，WHS=0.013 ns，THS=0，WPWS=3.870 ns，TPWS=0 |
+| 时序（0x31 前四路 / 0x11 后四路） | WNS=1.316 ns，TNS=0，WHS=0.035 ns，THS=0，WPWS=3.870 ns，TPWS=0 |
 | XSA 导出 | PASS，`build/dual_adau1979.xsa` |
 | Vitis 2022.2 ARM Cortex-A9 应用编译/链接 | PASS，`dual_capture.elf`，使用新 XSA 创建/更新的平台 |
 | 两份寄存器头 | 字节一致 |
@@ -15,11 +15,12 @@
 | 生成路径核对 | 新构建编译清单中仓库外路径为 0；构建脚本重建 BD 的 XCI 元数据，避免复用旧 gen_directory |
 | Python 工具语法 | `py_compile` PASS |
 | FPGA 上板下载 | PASS：用户检查电源/JTAG 后检测到 arm_dap_0、xc7z020_1；位流、匹配 PS 初始化及 ELF 下载运行成功 |
-| 真实双芯片初始化（重焊后 19:28） | PASS：COM5/921600，0x11 主机、0x31 从机均通过地址 ACK、全部配置写 ACK、PLL 和五项读回 |
+| 真实双芯片初始化（旧顺序，重焊后 19:28） | PASS：COM5/921600，0x11 主机、0x31 从机均通过地址 ACK、全部配置写 ACK、PLL 和五项读回 |
 | 初始化失败采集门控 | PASS：init_done=0、init_error=1、START=0、累计 AXIS 帧=0，DMA 未启动 |
-| 60 秒双芯片连续实采 | PASS：61 条进度记录，首末至少 60 秒；DMA 46→2861，FIFO 溢出/同步错误/I²C 错误均为 0，DMASR=0 |
+| 60 秒双芯片连续实采（旧顺序） | PASS：61 条进度记录，首末至少 60 秒；DMA 46→2861，FIFO 溢出/同步错误/I²C 错误均为 0，DMASR=0 |
+| 当前芯片组顺序上板（极性修正前） | PASS：恢复 JTAG 后下载，61 条进度、至少 60 秒；DMA 46→2861，I²S/AXIS 均增加 2882395，全部错误为 0 |
 | q 停止 | PASS：串口返回 Capture stopped，环形缓冲保留 |
-| 逐路物理信号对应 | 未执行：用户当前无信号源，明确先完成连续采集验收；不能将此项写为通过 |
+| 物理信号对应（极性修正前） | 发现不符：用户确认 0x31 VIN1/CH1 注入 1 kHz/1 Vpp，强信号出现在 ch2；其余七路待注入 |
 
 - `adau1979_capture_core.v`: exactly one compiled copy, byte-identical to the delivered source.
 - `adau1979_capture_v1_0.v`: exactly one compiled copy, byte-identical to the delivered source.
@@ -54,7 +55,51 @@ AXI 仿真覆盖新寄存器银行、写高地址不能改旧控制寄存器、N
 可用 `scripts/build_dual.tcl`、`scripts/build_dual_vitis.tcl` 重建；
 `tests/board_acceptance.py` 已实际连接 COM5 执行；早先初始化失败返回非零，重焊后完整 60 秒检查返回 0。
 
-## 0x11 重焊后的 60 秒连续采集实测（最新）
+## 当前输出顺序：0x31 前四路、0x11 后四路
+
+按用户要求调整逻辑 A/B 与物理地址、数据线的对应，保持物理 0x11 为时钟主机。
+主从物理初始化顺序仍是先 0x31 从机、等待 100 ms、再 0x11 主机；共享复位及 DMA 环不变。
+
+| 逻辑设备 | 地址 | 角色 | SDATA | DDR / 打印 |
+|---|---|---|---|---|
+| A | 0x31 | slave，06=00 | 0/1 | word0..3 / ch1..4 |
+| B | 0x11 | master，06=01 | 2/3 | word4..7 / ch5..8 |
+
+BD 主源与实际导出的 resolved_bd.tcl 参数一致：DEVICE_A_ADDR=49、DEVICE_B_ADDR=17、
+AUDIO_MASTER=1、A_SDATA=0/1、B_SDATA=2/3；映射寄存器预期 00007203。
+所有编译路径均在仓库内，八个 RTL 编译副本与交付源字节一致，平台 XSA 与导出文件一致。
+Vitis 主循环 DMA 逻辑未改；增加初始化后的配置打印，使 UART 日志能记录实际映射。
+
+18 项 XSim 全部通过（含反转 LRCLK 场景），新增当前地址/角色组合初始化，以及当前映射 AXI 成功和 0x31 NACK 门控。
+四根线可区分数据的 SWAP=1 流仿真检查当前顺序的 3072 帧、符号扩展、3 个 TLAST 和背压稳定。
+XSCT 直接执行配置脚本，确认默认双芯片配置和 single 参数恢复的原 0x11 主机/SDATA[2]/[3] 配置均正确。
+完整 Vivado/Vitis 构建通过，时序见表。
+
+19:44 JTAG 下载未发现 APU，只有 whole scan chain (DR shift through all zeroes)；
+Hardware Manager 降至 1 MHz 重扫仍报 No devices detected。
+用户重新连接后重试下载成功，实际完成当前芯片组顺序的 60 秒采集。
+61 条进度；DMA 46→2861，I²S 855954→3738349，AXIS 48044→2930439，
+I²S 与 AXIS 均增加 2882395。FIFO 水位快照均为 0，溢出/同步/I²C/DMA 错误全程为 0。
+q 停止确认。记录见 `board-reordered-60s-uart.txt`、`board-reordered-60s-summary.json`。
+
+用户确认 0x31 VIN1/CH1 接入 1 kHz、1 Vpp，原输出却为 ch2。停止后 JTAG 读取物理 DDR，
+状态 active=6、completed=2862、last=5，与 UART 末值相符；排除 active6，
+按 7/0/1/2/3/4/5 连接七个完整块，共 7168 帧，57344 个字符号扩展全部正确。
+ch2 AC RMS 约 4306289 ADC 码，其余通道最大约 461 码；
+末块过零中位周期估算 1000.03 Hz（假定 48 kHz）。部分样本触及满幅码，不能判定幅度或失真合格。
+
+用户提供的图 22 是标准 I²S：低电平 CH1/3、高电平 CH2/4，MSB 延后一个 BCLK。
+但实际两颗 0x04=BF，bit7 LR_POL=1；
+Analog Devices 维护的 [Linux ADAU1977/1978/1979 驱动](https://github.com/torvalds/linux/blob/master/sound/soc/codecs/adau1977.c)
+在 BLOCK_POWER_SAI 定义 bit7 为 LR_POL，并由 set_dai_fmt 的 invert_lrclk 控制。
+当前接收器原参数 LR_POLARITY=1 选择低时隙先，与反转后的高时隙 CH1 不匹配。
+因此只将双芯片工程已有 LR_POLARITY 参数设为 0，高→低组成一个公共完整帧；
+不修改采样边沿、同步器、I²S 延迟、ADC 寄存器脚本或 DMA。
+single 恢复原 LR_POLARITY=1，保留原单芯片采集行为，物理通道仍需核验。
+新增反转 LRCLK 仿真：每线/时隙/帧均有不同样本，核对 3072 帧、3 次 TLAST、符号扩展、背压，
+能发现仅交换字而将相邻帧配对的错误。此后的构建与实测单独记录。
+
+## 0x11 重焊后的首次 60 秒连续采集实测（19:28，调整顺序前）
 
 2026-10-21 19:28–19:29（Asia/Shanghai）。用户重新焊接 0x11 后，
 重新通过 JTAG 加载提交 `86b83667d0bd0f3a9c7994fc12c35e1478a76835` 的同一位流与 ELF，
