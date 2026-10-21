@@ -1,0 +1,59 @@
+{
+  "tested_source_commit": "86b83667d0bd0f3a9c7994fc12c35e1478a76835",
+  "date": "2026-10-21",
+  "timezone": "Asia/Shanghai",
+  "port": "COM5",
+  "baud": 921600,
+  "command": "python tests/board_acceptance.py --port COM5 --seconds 60 --output build/board-resolder-acceptance.txt",
+  "acceptance_exit_code": 0,
+  "observed_progress_seconds_at_least": 60,
+  "progress_rows": 61,
+  "first": {
+    "status": 3845,
+    "i2s_frames": 1308201,
+    "dma_blocks": 46,
+    "fifo_frames": 0,
+    "fifo_overflows": 0,
+    "err_total": 0,
+    "i2s_sync_err": 0,
+    "i2c_ack_err": 0,
+    "display_skipped_blocks": 33,
+    "axis_frames": 48044,
+    "DMASR": 0
+  },
+  "last": {
+    "status": 3845,
+    "i2s_frames": 4190597,
+    "dma_blocks": 2861,
+    "fifo_frames": 0,
+    "fifo_overflows": 0,
+    "err_total": 0,
+    "i2s_sync_err": 0,
+    "i2c_ack_err": 0,
+    "display_skipped_blocks": 2253,
+    "axis_frames": 2930440,
+    "DMASR": 0
+  },
+  "dma_block_delta": 2815,
+  "i2s_frame_delta": 2882396,
+  "axis_frame_delta": 2882396,
+  "fifo_level_max": 0,
+  "sample_lines": 607,
+  "signed_24_to_32_check": "PASS on every printed word",
+  "distinct_values_per_printed_channel": [
+    88,
+    139,
+    91,
+    85,
+    83,
+    160,
+    88,
+    94
+  ],
+  "q_stop_confirmed": true,
+  "physical_channel_injection": "Not performed; user has no signal source at present",
+  "sha256": {
+    "build\\vivado\\dual_adau1979.runs\\impl_1\\design_1_wrapper.bit": "a4caf1be9851aaad60a046b45ef17f35f301de26cc2e7e663a33af90cec3c091",
+    "build\\vitis\\dual_capture\\Debug\\dual_capture.elf": "f4df2177ac5c9602282b23c450152fd3c562bcaf1b1e5272b46a5ee0f134e56b"
+  }
+}

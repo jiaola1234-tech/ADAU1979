@@ -206,12 +206,14 @@ xsct.bat scripts/build_dual_vitis.tcl
    检查其余通道没有串位。100 ms 快照不能代替波形/频率质量分析。
 4. 手动保存实物位号—地址—SDATA—打印通道记录和 UART 日志，才可宣称双芯片上板通过。
 
-2026-10-21 已通过 JTAG 下载到 AX7020 并通过 COM5 实测：0x31 从机的 ACK、PLL、
-五项读回全部通过。最新加入 100 ms 延时与独立地址探测的版本再次上板，
-0x11 主机在配置前地址探测即 NACK（attempted=1、done=1、ACK=0）；尚未发送配置字节。
-采集门控正常拒绝启动，尚未完成 60 秒实采与逐路信号注入。
-完整结果见 `tests/results/validation.md`、`tests/results/board-probe-init.txt`，
-此前版本的串口记录保留在 `tests/results/board-init.txt`。
+2026-10-21 19:28–19:29，用户重焊 0x11 后，使用同一双芯片构建重新下载，
+两颗的地址 ACK、配置写 ACK、PLL 和五项读回均通过，正式八通道连续采集至少 60 秒通过。
+DMA 完成块从 46 增至 2861；I²S 和 AXIS 帧均增加 2882396；
+FIFO 溢出、同步错误和 I²C 错误全程为 0，DMASR 无错误；q 停止得到确认。
+用户当前没有信号源，逐路物理信号对应测试尚未执行。
+完整结果见 `tests/results/validation.md`、`tests/results/board-60s-summary.json`，
+原始串口文本见 `tests/results/board-60s-uart.txt`。
+重焊前的 NACK 记录保留在 `tests/results/board-init.txt`、`tests/results/board-probe-init.txt`。
 
 本仓库既有约定忽略 bit/xsa/elf/dcp 等生成物。本交付提交源码、打包、BD、XDC、
 应用、脚本和验证说明，不把本机缓存、凭据、临时文件或旧构建产物上传。
